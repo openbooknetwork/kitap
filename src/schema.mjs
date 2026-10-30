@@ -28,6 +28,7 @@ export const Site = z.object({
   themes: Themes.optional(),
   url: z.string().url().optional(), // where the site is published, for canonical links, sitemaps and llms.txt
   repository: z.string().url().optional(), // the content repository: a Contribute link on the main page, a source link per story
+  ask: z.array(z.enum(['chatgpt', 'claude'])).default([]), // assistants a page offers to open with its text as the prompt
   branch: z.string().default('main'),
   // the object store that holds the images and the engine's objects: url serves them, bucket and endpoint take uploads
   assets: z.object({ url: z.string().url().refine(u => u.endsWith('/'), 'ends in /'), bucket: z.string().min(1), endpoint: z.string().url() }).strict().optional(),

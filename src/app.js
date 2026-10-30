@@ -63,6 +63,7 @@ function renderChrome(){
   $('mapdata').innerHTML = `${ICONS.info}<span>${esc(T().map_data)}</span>`; $('mapdata').setAttribute('aria-label', T().map_data);
   $('mapdata').hidden = !B.credits.length;
   $('othersrc').innerHTML = `${ICONS['external-link']}<span>${esc(T().other_sources)}</span>`; $('othersrc').setAttribute('aria-label', T().other_sources);
+  $('ask').innerHTML = `${ICONS['message-circle']}<span>${esc(T().ask)}</span>`; $('ask').setAttribute('aria-label', T().ask); $('ask').hidden = !B.site.ask.length;
   $('credits').innerHTML = `<p class="made">${credit(T())}</p><h4>${esc(T().map_data)}</h4><ul>${B.credits.map(c => `<li>${esc(L(c))}</li>`).join('')}</ul>`;
   $('prev').innerHTML = `${ICONS['chevron-left']} ${esc(T().prev)}`;
   $('next').innerHTML = `${esc(T().next)} ${ICONS['chevron-right']}`;
@@ -201,11 +202,24 @@ $('peek').onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.prevent
 $('peek-close').onclick = e => { e.stopPropagation(); $('peek').hidden = true; };
 $('legend-btn').onclick = () => document.body.classList.toggle('legend-open');
 // the data credit popup and the page's other sources popup share the credit bar, one open at a time
-const CREDIT_POPUPS = { mapdata: 'credits', othersrc: 'othercredits' };
+const CREDIT_POPUPS = { mapdata: 'credits', othersrc: 'othercredits', ask: 'askmenu' };
 const showCredits = (open, btn = 'mapdata') => { for (const [b, p] of Object.entries(CREDIT_POPUPS)) { const on = open && b === btn; $(p).hidden = !on; $(b).setAttribute('aria-expanded', on); } };
 $('mapdata').onclick = () => showCredits($('credits').hidden, 'mapdata');
 $('othersrc').onclick = () => showCredits($('othercredits').hidden, 'othersrc');
-document.addEventListener('click', e => { if (!e.target.closest('.credit')) showCredits(false); });
+// the assistants of site.yaml, each opened in a new tab with the page's text as the prompt; the reader's own account answers
+const ASSISTANTS = { chatgpt: { name: 'ChatGPT', url: q => `https://chatgpt.com/?q=${q}` }, claude: { name: 'Claude', url: q => `https://claude.ai/new?q=${q}` } };
+function askPrompt(p){
+  const d = document.createElement('div'); d.innerHTML = p === OVERVIEW ? `<p>${esc(L(B.summary))}</p>` : p.html[lang];
+  d.querySelectorAll('figure').forEach(f => f.remove()); // the prose only, without the image captions and credits
+  const text = d.textContent.replace(/\s+/g, ' ').trim().slice(0, 2500);
+  return `${T().ask_prompt.replace('{title}', L(p.title)).replace('{url}', location.href)}\n\n${text}`;
+}
+$('ask').onclick = () => {
+  const q = encodeURIComponent(askPrompt(here()));
+  $('askmenu').innerHTML = `<h4>${esc(T().ask_title)}</h4><div class="ask-list">${B.site.ask.map(id => `<a href="${esc(ASSISTANTS[id].url(q))}" target="_blank" rel="noopener">${esc(ASSISTANTS[id].name)} ${ICONS['external-link']}</a>`).join('')}</div><p class="note">${esc(T().ask_note)}</p>`;
+  showCredits($('askmenu').hidden, 'ask');
+};
+document.addEventListener('click', e => { if (!e.target.closest('.corner')) showCredits(false); });
 const showSettings = open => { $('settings').hidden = !open; $('settings-btn').setAttribute('aria-expanded', open); };
 $('settings-btn').onclick = () => showSettings($('settings').hidden);
 document.addEventListener('click', e => { if (!$('settings').hidden && !e.target.closest('.prefs')) showSettings(false); });

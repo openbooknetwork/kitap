@@ -28,6 +28,10 @@ search_stories: Search stories
 no_match: "No story matches “{q}”."
 map_data: Data
 other_sources: Other sources
+ask: Ask AI
+ask_title: Ask about this page
+ask_prompt: "I am reading “{title}” at {url}. Answer my questions about it from this text and the page's sources, and say when you are unsure."
+ask_note: Opens in a new tab with the page's text as the question.
 start: Start
 not_found: There is no page at this address.
 settings: Settings

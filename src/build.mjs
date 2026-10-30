@@ -48,7 +48,7 @@ const readUi = dir => Object.fromEntries(fs.readdirSync(dir).filter(f => f.endsW
 const UI = readUi(UI_DIR);
 // Icons come from Lucide: the shell's own, and the ones an engine asks for by name
 const ICON_DIR = path.dirname(require.resolve('lucide-static/icons/flag.svg'));
-const SHELL_ICONS = ['x', 'external-link', 'chevron-left', 'chevron-right', 'list', 'info', 'settings', 'languages'];
+const SHELL_ICONS = ['x', 'external-link', 'chevron-left', 'chevron-right', 'list', 'info', 'settings', 'languages', 'message-circle'];
 function iconSvg(name, where) {
   const file = path.join(ICON_DIR, name + '.svg');
   if (!exists(file)) fail(where, `unknown icon "${name}", pick a name from https://lucide.dev/icons`);
@@ -375,7 +375,7 @@ function buildStory(p, storyDir, site, engine) {
   // --- bundle and pages ---
   const bundle = {
     id: story.id, title: T(story.title, 'story.title'), summary, span, cover, languages: langs, defaultLanguage: defaultLang, ui, families, engine: engine.id,
-    site: { title: siteT(site.title, 'site.title'), languages: site.langs, defaultLanguage: site.defaultLang,
+    site: { title: siteT(site.title, 'site.title'), languages: site.langs, defaultLanguage: site.defaultLang, ask: site.ask ?? [],
       source: site.repository ? `${site.repository.replace(/\/$/, '')}/tree/${site.branch}/${where.split(path.sep).join('/')}` : null },
     themes: themeList(site.themes, ui, langs), defaultTheme: story.theme ?? site.theme,
     credits: eb.credits ?? [], images, icons, pages: pages.map(({ dir, include, ...p }) => p), tree: navTree(tree),

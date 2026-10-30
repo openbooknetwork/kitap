@@ -26,6 +26,7 @@ title: Open Body Book
 engine: beden
 languages: [en, tr]
 assets: { url: https://assets.example.org/, bucket: body-assets, endpoint: https://... }
+ask: [chatgpt, claude]               # optional: an Ask button on every page opens the assistant with the page's text
 ```
 
 ```yaml

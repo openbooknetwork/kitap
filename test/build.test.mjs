@@ -26,6 +26,7 @@ test('a book builds every page in every language with the engine in its viewport
   assert.deepEqual(B.plain, { tint: 'blue', count: 2 });
   assert.deepEqual(B.pages[0].plain, { note: null, things: ['apple'] });
   assert.deepEqual(B.credits, ['The plain engine']);
+  assert.deepEqual(B.site.ask, ['chatgpt', 'claude']);
   assert.equal(B.ui.en.hint, 'Just read.', 'the engine lays its strings over the book\'s');
   assert.equal(B.ui.en.prev, 'Prev');
   const html = read(root, 'dist/first-story/en/one/index.html');

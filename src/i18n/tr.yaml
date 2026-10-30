@@ -28,6 +28,10 @@ search_stories: Hikâye ara
 no_match: "“{q}” ile eşleşen hikâye yok."
 map_data: Veri
 other_sources: Diğer kaynaklar
+ask: Yapay zekâya sor
+ask_title: Bu sayfayı sor
+ask_prompt: "“{title}” sayfasını okuyorum: {url}. Sorularımı bu metne ve sayfanın kaynaklarına dayanarak yanıtla, emin olmadığında söyle."
+ask_note: Yeni sekmede, sayfanın metni soru olarak açılır.
 start: Başla
 not_found: Bu adreste bir sayfa yok.
 settings: Ayarlar

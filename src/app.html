@@ -111,7 +111,11 @@ nav.pages button:focus-visible,nav.pages a.pg:focus-visible{outline:2px solid va
 .legend .r{width:1rem;height:0;border:0;border-top:2px solid var(--rc);position:relative}
 .legend .r.arrow::after{content:"";position:absolute;inset-inline-end:-2px;top:-5px;border:4px solid transparent;border-inline-start:5px solid var(--rc)}
 .legend .r.dashed{border-top-style:dashed}
-.credit{position:absolute;inset-inline-end:.714rem;bottom:.714rem;background:var(--panel);border:1px solid var(--rule);padding:3px .571rem;font-size:.786rem;color:var(--ink-2);pointer-events:auto;
+/* the corner of the map: the Ask button over the credit bar, and the popups they open above both */
+.corner{position:absolute;inset-inline-end:.714rem;bottom:.714rem;z-index:4;display:flex;flex-direction:column;align-items:flex-end;gap:.429rem;pointer-events:auto}
+.ask{display:flex;align-items:center;gap:.357rem;background:var(--panel);border:1px solid var(--rule);border-radius:6px;padding:.357rem .714rem;font:inherit;font-size:.929rem;font-weight:600;color:var(--ink);cursor:pointer}
+.ask svg{width:1.143rem;height:1.143rem} .ask[hidden]{display:none} .ask:focus-visible{outline:2px solid var(--accent)}
+.credit{background:var(--panel);border:1px solid var(--rule);padding:3px .571rem;font-size:.786rem;color:var(--ink-2);pointer-events:auto;
   display:flex;align-items:center;gap:.571rem}
 .credit a{color:inherit}
 .credit :is(#mapdata,#othersrc){background:none;border:0;border-inline-start:1px solid var(--rule);padding:0;padding-inline-start:.571rem;font:inherit;color:inherit;text-decoration:underline;cursor:pointer}
@@ -124,6 +128,7 @@ nav.pages button:focus-visible,nav.pages a.pg:focus-visible{outline:2px solid va
 .credits ul{margin:0;padding-inline-start:1rem;display:grid;gap:.286rem}
 .credit #othersrc[hidden]{display:none}
 .credits .made{display:none;margin:0 0 .429rem}
+.credits .ask-list{display:grid;gap:.286rem;margin:0 0 .429rem} .credits .note{margin:0;color:var(--ink-2)}
 /* map tools: the 2D | 3D switch at the top of the map, joined on phones by the Legend button */
 .maptools{position:absolute;top:.714rem;inset-inline-end:.714rem;z-index:3;display:flex;gap:.429rem;align-items:flex-start}
 .view{display:flex;background:var(--panel);border:1px solid var(--rule);border-radius:6px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.15)}
@@ -253,7 +258,7 @@ aside.story figcaption small{display:block;font-size:.786rem;color:var(--ink-2);
   aside.story .text{grid-row:2;grid-column:1;z-index:2;background:var(--paper);overflow:auto;padding:.571rem .143rem 1.143rem}
   body[data-tab="map"] aside.story .text{display:none}
   /* in the text view the map's own overlays step aside; they sit above the text in the stacking order otherwise */
-  body[data-tab="text"] :is(.peek,.maptools,.legend,.credit,.maplibregl-popup,.hl-label){display:none}
+  body[data-tab="text"] :is(.peek,.maptools,.legend,.corner,.maplibregl-popup,.hl-label){display:none}
   .hl-label.pinned{top:calc(.571rem + max(40px,2.857rem) + .429rem)} /* below the map tools and the credit */
   /* the peek card: the first two lines of the page's text over the bottom of the map; a tap opens the text */
   .peek{display:block;position:absolute;inset-inline:.571rem;bottom:.571rem;z-index:3;background:var(--panel);border:1px solid var(--rule);border-radius:8px;
@@ -272,7 +277,9 @@ aside.story figcaption small{display:block;font-size:.786rem;color:var(--ink-2);
   .legend-btn[hidden]{display:none}
   .legend{top:calc(.571rem + max(40px,2.857rem) + .429rem);bottom:auto;inset-inline-start:.571rem;z-index:3;max-width:calc(100% - 1.143rem)}
   body:not(.legend-open) .legend{display:none}
-  .credit{top:.571rem;bottom:auto;inset-inline-end:.571rem;padding:0;border:0;background:none}
+  .corner{top:.571rem;bottom:auto;inset-inline-end:.571rem;flex-direction:row-reverse}
+  .ask{display:grid;place-items:center;width:max(44px,3.143rem);height:max(40px,2.857rem);padding:0;color:var(--ink-2)} .ask span{display:none}
+  .credit{padding:0;border:0;background:none}
   .credit #made{display:none}
   .credit :is(#mapdata,#othersrc){display:grid;place-items:center;width:max(44px,3.143rem);height:max(40px,2.857rem);padding:0;background:var(--panel);border:1px solid var(--rule);border-radius:6px;color:var(--ink-2)}
   .credit :is(#mapdata,#othersrc) svg{display:block} .credit :is(#mapdata,#othersrc) span{display:none}
@@ -338,7 +345,7 @@ aside.story figcaption small{display:block;font-size:.786rem;color:var(--ink-2);
     <div class="maptools"><button type="button" class="legend-btn" id="legend-btn"></button><div class="view" id="view" role="group"><button type="button" data-view="2d" aria-pressed="true"></button><button type="button" data-view="3d" aria-pressed="false"></button></div></div>
     <div class="legend" id="legend"></div>
     <div class="hl-label" id="hl-label" hidden></div>
-    <div class="credit" id="credit"><span id="made"></span><button type="button" id="mapdata" aria-expanded="false" aria-controls="credits"></button><div class="credits" id="credits" hidden></div><button type="button" id="othersrc" aria-expanded="false" aria-controls="othercredits" hidden></button><div class="credits" id="othercredits" hidden></div></div>
+    <div class="corner" id="corner"><button type="button" class="ask" id="ask" aria-expanded="false" aria-controls="askmenu" hidden></button><div class="credits" id="askmenu" hidden></div><div class="credit" id="credit"><span id="made"></span><button type="button" id="mapdata" aria-expanded="false" aria-controls="credits"></button><div class="credits" id="credits" hidden></div><button type="button" id="othersrc" aria-expanded="false" aria-controls="othercredits" hidden></button><div class="credits" id="othercredits" hidden></div></div></div>
     <div class="peek" id="peek" role="button" tabindex="0"><p id="peek-text"></p><span class="more" id="peek-more"></span><button type="button" class="close" id="peek-close">×</button></div>
     <div class="lightbox" id="lightbox" hidden>
       <figure><img id="lb-img" alt=""><figcaption id="lb-cap"></figcaption></figure>

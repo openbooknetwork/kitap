@@ -3,3 +3,4 @@ intro: { en: "A one story site with the test engine." }
 languages: [en]
 default_language: en
 engine: plain
+ask: [chatgpt, claude]

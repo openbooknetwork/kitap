@@ -12,7 +12,7 @@ const RELOAD = `<script>(()=>{let v=null;setInterval(async()=>{try{const r=await
 // Serve root/dist on the port and rebuild on changes: a change in one story's folder rebuilds that story and the main
 // page, any other change every story. Returns the http server. Builds run in a child process, so package edits apply,
 // and with --local-assets, so the images on this machine show before they are uploaded.
-// story serves that one story as a site of its own, built into out, by default dist/.
+// story serves that one story as a site of its own. Every build writes into out, by default dist/, which the server serves.
 export function dev({ root = process.cwd(), port = Number(process.env.PORT) || 8080, log = console.log, story = null, out = null, engine = null } = {}) {
   const DIST = out ? path.resolve(root, out) : path.join(root, 'dist'), CONTENT = path.join(root, 'content');
   // engine is the engine module's path, handed to each build and watched beside kitap's own source
@@ -25,7 +25,7 @@ export function dev({ root = process.cwd(), port = Number(process.env.PORT) || 8
     building = true;
     const t0 = Date.now(), wasAll = all, stories = [...changed];
     all = false; changed = new Set();
-    const scope = story ? ['--story', story, ...(out ? ['--out', out] : [])] : wasAll ? [] : stories.flatMap(s => ['--only', s]);
+    const scope = [...(story ? ['--story', story] : wasAll ? [] : stories.flatMap(s => ['--only', s])), ...(out ? ['--out', out] : [])];
     const p = spawn(process.execPath, [path.join(PKG, 'bin', 'kitap.mjs'), 'build', '--local-assets', ...(engine ? ['--engine', engine] : []), ...scope], { stdio: 'inherit', cwd: root });
     p.on('exit', code => {
       building = false;
