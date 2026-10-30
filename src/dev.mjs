@@ -13,9 +13,10 @@ const RELOAD = `<script>(()=>{let v=null;setInterval(async()=>{try{const r=await
 // page, any other change every story. Returns the http server. Builds run in a child process, so package edits apply,
 // and with --local-assets, so the images on this machine show before they are uploaded.
 // story serves that one story as a site of its own, built into out, by default dist/.
-export function dev({ root = process.cwd(), port = Number(process.env.PORT) || 8080, log = console.log, story = null, out = null } = {}) {
+export function dev({ root = process.cwd(), port = Number(process.env.PORT) || 8080, log = console.log, story = null, out = null, engine = null } = {}) {
   const DIST = out ? path.resolve(root, out) : path.join(root, 'dist'), CONTENT = path.join(root, 'content');
-  const WATCH = [CONTENT, path.join(root, 'i18n'), path.join(root, 'plugins'), path.join(PKG, 'src')].filter(fs.existsSync);
+  // engine is the engine module's path, handed to each build and watched beside kitap's own source
+  const WATCH = [CONTENT, path.join(root, 'i18n'), path.join(root, 'plugins'), path.join(PKG, 'src'), ...(engine ? [path.join(path.dirname(engine), '..', 'src')] : [])].filter(fs.existsSync);
 
   // what the next build covers: every story, or the story folders changed since the last build
   let version = 0, building = false, queued = false, all = true, changed = new Set();
@@ -25,7 +26,7 @@ export function dev({ root = process.cwd(), port = Number(process.env.PORT) || 8
     const t0 = Date.now(), wasAll = all, stories = [...changed];
     all = false; changed = new Set();
     const scope = story ? ['--story', story, ...(out ? ['--out', out] : [])] : wasAll ? [] : stories.flatMap(s => ['--only', s]);
-    const p = spawn(process.execPath, [path.join(PKG, 'bin', 'harita.mjs'), 'build', '--local-assets', ...scope], { stdio: 'inherit', cwd: root });
+    const p = spawn(process.execPath, [path.join(PKG, 'bin', 'kitap.mjs'), 'build', '--local-assets', ...(engine ? ['--engine', engine] : []), ...scope], { stdio: 'inherit', cwd: root });
     p.on('exit', code => {
       building = false;
       if (code === 0) { version = Date.now(); log(`build ok in ${Date.now() - t0} ms, tabs reload`); }

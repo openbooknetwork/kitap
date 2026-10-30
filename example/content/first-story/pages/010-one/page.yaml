@@ -1,0 +1,4 @@
+date: { en: "Day one" }
+title: { en: "One" }
+sources: ["A source."]
+plain: { things: [apple] }

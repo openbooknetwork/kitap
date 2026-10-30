@@ -1,5 +1,0 @@
-{
-  "type": "Feature",
-  "properties": { "id": "southwest", "family": "settled", "name": { "en": "The first settlements" } },
-  "geometry": { "type": "Polygon", "coordinates": [[[-23.5, 63.6], [-20.5, 63.6], [-20.5, 64.9], [-23.5, 64.9], [-23.5, 63.6]]] }
-}

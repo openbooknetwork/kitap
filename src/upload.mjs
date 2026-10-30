@@ -1,10 +1,11 @@
-// harita upload: puts the images and elevation tiles each story links to into the asset store, then the story's hash
-// tree, so harita build --strict finds them with one request.
+// kitap upload: puts the images and the engine's objects each story links to into the asset store, then the story's
+// hash tree, so kitap build --strict finds them with one request.
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { storyAssets } from './build.mjs';
 import { checkOriginal, contentType, downloadOriginal, sha256Of } from './image.mjs';
-import { cutTiles, tileKey } from './terrain.mjs';
+import { typeOf } from './routes.mjs';
 import { storeReader, storeWriter, missingKeys, missingIn, pool, describeMissing } from './store.mjs';
 import { mb, plural, progressLine } from './util.mjs';
 
@@ -37,16 +38,16 @@ async function originalOf(im, reader, inStore) {
   else if (inStore && (bytes = await reader.get(im.keys.original))) from = `the store's ${im.keys.original}`;
   else if (im.url) { bytes = (await downloadOriginal(im.url)).bytes; from = im.url; }
   else throw new Error(`${im.dir}: the original is not on this machine, in the store or at a url in image.yaml, add it to the folder`);
-  if (sha256Of(bytes) !== im.sha256) throw new Error(`${im.dir}: ${from} does not match the sha256 of image.yaml${im.file ? ', harita rehash writes the new one' : ''}`);
+  if (sha256Of(bytes) !== im.sha256) throw new Error(`${im.dir}: ${from} does not match the sha256 of image.yaml${im.file ? ', kitap rehash writes the new one' : ''}`);
   await checkOriginal(bytes, ext, from);
   return bytes;
 }
 
 // Puts the objects of story, else of every story, into the store of site.yaml's assets: the originals and their WebP
-// sizes, the elevation tiles, and last each story's hash tree with latest.json naming it. dryRun lists what would go
+// sizes, the engine's objects, and last each story's hash tree with latest.json naming it. dryRun lists what would go
 // and writes nothing. Returns the keys uploaded, or with dryRun the keys it would upload.
-export async function upload({ root = process.cwd(), story = null, dryRun = false, log = console.log, progress = progressLine, cache = path.join(root, '.cache', 'harita'), elevation, wait } = {}) {
-  const { assets, stories } = storyAssets({ root, story, log });
+export async function upload({ root = process.cwd(), story = null, dryRun = false, log = console.log, progress = progressLine, cache = path.join(root, '.cache', 'kitap'), engine = null, wait, ...options } = {}) {
+  const { assets, stories, engine: e } = storyAssets({ root, story, log, engine, cache });
   const reader = storeReader(assets.url, { wait }), writer = dryRun ? null : storeWriter(assets, { wait });
   // an upload lists the bucket once, a thousand keys a request, and a dry run asks through the public URL alone
   const held = writer ? new Set((await writer.list()).map(o => o.key)) : null;
@@ -68,11 +69,11 @@ export async function upload({ root = process.cwd(), story = null, dryRun = fals
     if (complete) { log(`${s.story}: the store holds every object`); continue; }
     const images = s.images.filter(im => Object.values(im.keys).some(k => missing.has(k)) && !seen.has(im.keys.original));
     for (const im of images) seen.add(im.keys.original);
-    const tiles = s.tiles.filter(t => missing.has(tileKey(t)));
+    const objects = Object.values(s.groups).flat().filter(k => missing.has(k));
     if (dryRun) {
-      if (missing.size) log(`${s.story}: would upload ${describeMissing(s.tree, [...missing])}`);
+      if (missing.size) log(`${s.story}: would upload ${describeMissing(s.tree, [...missing], e.describeObjects)}`);
       for (const im of images) if (!im.file && !im.url && missing.has(im.keys.original)) throw new Error(`${im.dir}: the original is not on this machine, in the store or at a url in image.yaml, add it to the folder`);
-      sum.images += images.length; sum.tiles += tiles.length;
+      sum.images += images.length; sum.tiles += objects.length;
       for (const k of missing) planned.add(k);
       continue;
     }
@@ -88,9 +89,13 @@ export async function upload({ root = process.cwd(), story = null, dryRun = fals
       }
       sum.images++; sum.imageBytes += bytes;
     });
-    if (tiles.length) {
-      const dir = await cutTiles({ keys: tiles, cache, elevation, log });
-      await pool(tiles, 8, async t => { sum.tileBytes += await put(tileKey(t), fs.readFileSync(path.join(dir, t + '.png')), 'image/png'); sum.tiles++; });
+    // the engine makes its missing objects into a folder of their own, and each goes up under its key
+    if (objects.length) {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kitap-objects-'));
+      try {
+        await e.make({ stories: [{ ...s, groups: Object.fromEntries(Object.entries(s.groups).map(([g, keys]) => [g, keys.filter(k => missing.has(k))])) }], cache, out: dir, log, options });
+        await pool(objects, 8, async k => { sum.tileBytes += await put(k, fs.readFileSync(path.join(dir, k)), typeOf(k)); sum.tiles++; });
+      } finally { fs.rmSync(dir, { recursive: true, force: true }); }
     }
     progress({ ...cur, done: true });
     // the tree goes last, once every object it names is in the store, and latest.json names it
@@ -100,7 +105,10 @@ export async function upload({ root = process.cwd(), story = null, dryRun = fals
     log(`${s.story}: uploaded, its tree is meta/${s.story}/${s.tree.root}.json`);
   }
   const inStore = [...present].filter(k => !done.has(k)).length;
-  log(dryRun ? `would upload ${plural(sum.images, 'image')} and ${plural(sum.tiles, 'tile')}, ${inStore.toLocaleString('en')} objects are in the store`
-    : `uploaded ${plural(sum.images, 'image')} (${mb(sum.imageBytes)}) and ${plural(sum.tiles, 'tile')} (${mb(sum.tileBytes)}), ${inStore.toLocaleString('en')} were in the store`);
+  // the engine's objects in its own words, such as "198 elevation tiles", else by count
+  const others = [...(dryRun ? planned : done)].filter(k => !k.startsWith('images/') && !k.startsWith('meta/'));
+  const described = e.describeObjects ? e.describeObjects(others) : plural(others.length, 'other object');
+  log(dryRun ? `would upload ${plural(sum.images, 'image')} and ${described}, ${inStore.toLocaleString('en')} objects are in the store`
+    : `uploaded ${plural(sum.images, 'image')} (${mb(sum.imageBytes)}) and ${described} (${mb(sum.tileBytes)}), ${inStore.toLocaleString('en')} were in the store`);
   return [...(dryRun ? planned : done)];
 }

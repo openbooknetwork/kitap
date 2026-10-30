@@ -71,7 +71,7 @@ export function siteContext({ url, title, languages, defaultLanguage }) {
 // Markdown per language, and with a site URL its sitemap. bundle is what story.js carries. texts and images are
 // per page id and language: the Markdown source, and the first image the text shows. links holds each image's
 // original and og:image links, absolute or from the site root, and coverImage is the id of the story's cover.
-export function storyFiles({ shell, bundle: B, texts, firstImages, links, coverImage = null, site: siteIn, versions }) {
+export function storyFiles({ shell, bundle: B, texts, firstImages, links, coverImage = null, site: siteIn, engine = null, versions }) {
   const site = { ...siteIn, title: B.site.title }, files = {}, id = B.id, langs = B.languages, def = B.defaultLanguage, pages = B.pages;
   const homeLang = l => site.langs.includes(l) ? l : site.defaultLang;
   // the Markdown file sits in the story folder, so a link from the site root goes one folder up
@@ -97,7 +97,8 @@ export function storyFiles({ shell, bundle: B, texts, firstImages, links, coverI
     html = fill(html, '<div class="text" id="story"></div>', `<div class="text" id="story">${text}</div>`);
     html = fill(html, 'const ROUTE = null;', `const ROUTE = ${scriptJson(route)};`);
     html = fill(html, 'src="story.js"', `src="story.js?v=${versions.story}"`);
-    return fill(html, 'src="../harita.js"', `src="../harita.js?v=${versions.app}"`);
+    if (engine && html.includes(`src="../${engine}.js"`)) html = fill(html, `src="../${engine}.js"`, `src="../${engine}.js?v=${versions.engine}"`);
+    return fill(html, 'src="../kitap.js"', `src="../kitap.js?v=${versions.app}"`);
   };
 
   const overview = (lang, base, bare) => {

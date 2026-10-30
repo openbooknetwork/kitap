@@ -1,4 +1,4 @@
-// harita deploy: puts dist/ in the pages bucket the Worker serves, see worker.mjs. The files the bucket lacks or holds
+// kitap deploy: puts dist/ in the pages bucket the Worker serves, see worker.mjs. The files the bucket lacks or holds
 // in another version go up, scripts and stylesheets first, and the keys dist/ no longer holds go.
 import fs from 'fs';
 import path from 'path';
@@ -17,11 +17,11 @@ const CACHE = 'public, max-age=600';
 export async function deploy({ root = process.cwd(), dryRun = false, log = console.log, progress = progressLine, wait } = {}) {
   const siteFile = path.join(root, 'site.yaml');
   const site = fs.existsSync(siteFile) ? check(Site, yaml.load(fs.readFileSync(siteFile, 'utf8')), 'site.yaml') : {};
-  if (!site.pages) throw new Error('site.yaml: add a pages block with the bucket that holds the site, harita deploy writes dist/ there');
+  if (!site.pages) throw new Error('site.yaml: add a pages block with the bucket that holds the site, kitap deploy writes dist/ there');
   if (!site.assets) throw new Error('site.yaml: pages needs the assets block, whose endpoint is the account that holds the pages bucket');
   const dist = path.join(root, 'dist');
-  if (!fs.existsSync(path.join(dist, 'index.html'))) throw new Error('dist/index.html is missing, harita build writes the site to deploy');
-  const writer = storeWriter({ endpoint: site.assets.endpoint, bucket: site.pages.bucket }, { command: 'harita deploy', wait });
+  if (!fs.existsSync(path.join(dist, 'index.html'))) throw new Error('dist/index.html is missing, kitap build writes the site to deploy');
+  const writer = storeWriter({ endpoint: site.assets.endpoint, bucket: site.pages.bucket }, { command: 'kitap deploy', wait });
   // a dot starts the folder a build writes a story to before it swaps it in, and the files editors and Finder leave
   const files = fs.readdirSync(dist, { recursive: true }).map(f => f.split(path.sep).join('/'))
     .filter(f => !f.split('/').some(s => s.startsWith('.')) && fs.statSync(path.join(dist, f)).isFile()).sort();

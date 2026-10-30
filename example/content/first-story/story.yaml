@@ -1,0 +1,6 @@
+id: first-story
+title: { en: The first story }
+summary: { en: "Two pages that show every file kitap reads." }
+languages: [en]
+default_language: en
+plain: { tint: blue }

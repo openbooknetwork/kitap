@@ -1,934 +1,104 @@
-# Harita
+# Kitap
 
-An interactive map that steps through a timeline. Each page sets the map view, the occupation zones,
-the routes and the markers, and shows a text with images and sources beside the map. One build turns a
-content folder into a static site with a page per step in every language.
+The book under the Open Book Network sites. A book is a set of stories, a story is a run of pages, and a page is a
+text beside a picture that changes as the reader steps. Kitap reads the stories, builds a static site with a page
+per step in every language, and hands the picture to an engine: [harita](https://github.com/openbooknetwork/harita)
+draws maps, [beden](https://github.com/openbooknetwork/beden) bodies, [makina](https://github.com/openbooknetwork/makina)
+mechanisms, [hesap](https://github.com/openbooknetwork/hesap) algorithms.
 
-Harita is the framework: the npm package
-[@openhistoryatlas/harita](https://www.npmjs.com/package/@openhistoryatlas/harita), with a command line
-and a library API, developed at [github.com/openhistoryatlas/harita](https://github.com/openhistoryatlas/harita).
-Content lives in a separate project folder that depends on it. `example/` in this repository is a one
-story content project that uses every kind of content file.
-
-## Set up a content project
+## A content project
 
 ```
-mkdir my-history && cd my-history
-npm init -y
-npm install @openhistoryatlas/harita          # or github:openhistoryatlas/harita, or ../harita from a checkout
+site.yaml                       the main page, the engine, the languages, the theme, the store
+content/<story>/story.yaml      id, title, summary, span, cover, languages, and the engine's fields under its key
+content/<story>/pages/          a folder per page or group, numbered to order them
+  010-<group>/group.yaml        the group's title
+  010-<group>/010-<page>/page.yaml, text/<lang>.md
+content/<story>/shared/images/<name>-<six hex digits>/   image.yaml, the original, i18n/<lang>.yaml
+content/<story>/shared/<kind>s/<id>/                     the engine's items: battles, zones, models, ...
+content/shared/images/, content/shared/<kind>s/          what several stories share
+content/<story>/i18n/<lang>.yaml, i18n/<lang>.yaml       the translations; the default language is inline
 ```
-
-Add to `package.json`:
-
-```json
-"scripts": { "build": "harita build", "dev": "harita dev" }
-```
-
-Then create `content/` as described below, add an `assets` block to [site.yaml](#siteyaml) for the store that
-holds the images and elevation tiles, see [Asset store](#asset-store), and add these lines to `.gitignore`:
-
-```
-.cache/
-content/**/images/**/image.*
-!content/**/images/**/image.yaml
-```
-
-`npm run build` writes `dist/`: the main page listing the stories, each story's pages under `dist/<story>/`, the
-story data in `dist/<story>/story.js` and the script all story pages share in `dist/harita.js`. `dist/vendor/` holds
-MapLibre, Turf, topojson-client, the Fraunces and Public Sans fonts and the map label glyphs, copied from harita's
-packages and its `glyphs/` folder, so a page loads nothing from another host. A story folder cannot be named
-`vendor` or `assets`. The pages load images and elevation tiles from the asset store, so `dist/` holds no image or
-tile files. `dist/404.html` answers
-unknown paths and links back to the main page. Links are relative, so `dist/` works from `npm run dev` and from
-any static host or subpath.
-
-To publish the site, add a `pages` block to `site.yaml` with a second bucket, a `worker/` folder with the two files
-in [Deploy](#deploy), and a workflow that runs `harita build --strict`, `harita deploy` and `wrangler deploy`.
-
-## URLs
-
-```
-/                                  main page
-/tr/                               main page in Turkish
-/turkiye-1919-1923/                a story's overview: title, years and summary
-/turkiye-1919-1923/tr/             the overview in Turkish
-/turkiye-1919-1923/tr/congresses/  a page in Turkish
-```
-
-The main page exists in every language `site.yaml` lists, and a story's pages in every language its
-`story.yaml` lists. `/` and `/<story>/` open in the saved language, else in the first browser language the
-site has, else in the default language, and the address then takes that language's path. The address
-follows the reader through the story, so any view can be copied as a link and the browser back button
-steps back. The main page links each story in the main page's language, or in the story's default
-language when the story lacks it. Opened as a file, a story steps in place and the address keeps the page
-first opened.
-
-Each page's HTML holds its text, title and description, so search engines and AI crawlers read it without
-running the script. The build also writes each story as Markdown, `dist/<story>/<lang>.md`. The tags and
-files that need the site's own address come from `url` in [site.yaml](#siteyaml).
-
-The page loads MapLibre, topojson-client and Turf from CDNs, so it needs internet. A story that labels its
-countries also fetches the Noto Sans glyphs, under the SIL Open Font License, from the Protomaps assets
-host. Images and elevation tiles come from the asset store, and everything else is in `dist/`. A small
-"Generated by harita" note linking to this repository sits in the bottom right corner of the map, and under the story list on the main page. A "Map
-data" link beside it lists the sources of the borders and the relief. A page that draws other map data,
-such as a lake traced from OpenStreetMap, lists it under `map_sources`, and an "Other sources" link beside
-"Map data" then shows those sources with their links.
-
-A settings button at the top right of every page holds the layout, the language and the theme. The layout
-sets the story pages on a wide screen: the map in the middle, or the chronology and the text together at the
-left or the right, for a large touch screen where the reader stands at one side. A phone has one layout. The
-browser remembers each choice.
-
-While editing, run the watcher instead:
-
-```
-npm run dev
-```
-
-It rebuilds when anything under `content/`, `i18n/` or `plugins/` changes, or `site.yaml`, or harita's own
-`src/`, serves `dist/` at http://localhost:8080/ and reloads open tabs after each successful build. A change
-inside one story's folder rebuilds that story and the main page, and any other change rebuilds every story. A
-failed build prints the error and keeps the last good page. Set `PORT` to use another port. It builds with
-`--local-assets`, see [Asset store](#asset-store), so an image added on this machine shows before it is uploaded.
-
-`harita build --only <story>` does the same by hand: it builds the named story folders, `--only` once per
-story, and the main page, and keeps the other stories as the last build left them.
-
-`harita build --story <id> [--out <dir>]` builds one story as a site of its own, with a main page that lists
-it alone, into `<dir>`, by default `dist/`. `harita dev --story <id> [--out <dir>] [--port <n>]` serves it
-the same way and rebuilds it on every change. Builds that run side by side each take an `--out` of their own
-and share the zone cache and the elevation tiles in `.cache/harita/`.
-
-The build keeps each story's cleaned zones in `.cache/harita/stories/<story>/`. A build that leaves a
-story's zone files, the zone lists of its pages and the zone settings in `story.yaml` as they were reads the
-zones from there, so a text edit to a story with many zones rebuilds in seconds.
-
-## Asset store
-
-Images and elevation tiles live in an object store that speaks the S3 API, such as a Cloudflare R2 bucket. Git
-holds each image folder's `image.yaml`, and every object's key follows from it, so a fresh clone builds and shows
-every image without the files. The store holds and serves the files, and harita computes every key and hash:
-
-```
-images/<sha256>/<id>.<ext>            the original, as added
-images/<sha256>/s1/<id>-1280.webp     the original fitted inside 1280 × 1280
-images/<sha256>/s1/<id>-320.webp      the original fitted inside 320 × 320
-terrain/v1/<z>/<x>/<y>.png            an elevation tile
-meta/<story>/<root hash>.json         the story's hash tree
-meta/<story>/latest.json              the root hash of the story's newest tree
-```
-
-New bytes give new keys, and an uploaded key keeps its content, so objects are served as immutable for a year.
-`s1` counts the versions of the WebP sizes and `v1` those of the tile cut, and a new version moves those objects
-to new keys.
-
-### harita upload
-
-`harita upload [--story <id>] [--dry-run]` puts the objects a story needs into the bucket, or those of every story.
-It lists the bucket once, a thousand keys a request, to find what the store lacks. For each image the store lacks it
-takes the original from the folder, else from the store, else from `url`, checks it against `sha256` and the rules
-in [Images](#images), and makes the WebP sizes. It cuts the missing tiles into `.cache/harita/` and uploads each
-object with `Content-MD5`, eight at a time, trying a failed request five more times over half a minute. The
-story's hash tree goes last, then `latest.json`. A run cut short writes no tree, and the next run puts the rest. On a
-terminal a line per story counts the objects as they go up, and at the end it prints a summary such as `uploaded 34 images (12.1 MB) and 812 tiles (21.4 MB), 1,180 were in the
-store`.
-
-The credentials come from `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`, the S3 credentials of an API token for
-the bucket. `--dry-run` lists what would go, reads through `assets.url` alone and needs no credentials.
-
-### The strict check
-
-A story's hash tree has a directory per image folder the story shows, with the image's three keys, and a directory
-`terrain/<z>` per zoom level with the story's tiles at that zoom. A directory's hash is the sha256 of its sorted
-keys, and the root hash the sha256 of the sorted lines `<directory hash> <directory>`.
-
-`harita build --strict` fails when the store lacks an object a page links to, and names the image folders, the
-count of missing tiles and `harita upload --story <id>`. For each story it requests the meta file of the tree's
-root hash, which exists once the story is complete. Else it reads the tree `latest.json` names, and asks for the first
-byte of each key of the directories that differ that the stored tree lacks. A story without `latest.json`
-fails at once. An unchanged story costs one request, and every request goes through `assets.url`, so the check
-needs no credentials. A build without `--strict` asks the store nothing.
-
-### --local-assets
-
-`harita build --local-assets` copies each original on this machine to `dist/assets/<key>`, which every use of the
-image links, and the elevation tiles to `dist/assets/terrain/`. An image without its original here links its `url`,
-else the original in the store. `harita dev` builds this way, so a story shows its new images before any upload,
-and a reviewer sees a pull request's images through their `url`. A project without a store, such as `example/`,
-builds this way too.
-
-### Workflow for a story
-
-1. Add images with `harita image`, by URL where the original has one, and write the story.
-2. `harita dev` shows the story.
-3. Before release, a maintainer runs `harita upload --story <id>`.
-4. `harita build --strict --story <id>` passes once the store holds every object the story links to.
-5. Merge, then release. CI builds with `--strict` and deploys.
-
-A contributor adds each image by URL: a Commons thumbnail, or for their own file an attachment on their pull
-request. Maintainers hold the bucket's write credentials, and before merging they run `harita upload --story <id>`
-on the branch, which downloads each original from its `url`.
-
-### A Cloudflare R2 bucket
-
-- A custom domain for the bucket gives `assets.url`. Turn off the bucket's `r2.dev` URL, which skips the cache.
-- CORS on the bucket: origins `*`, methods `GET` and `HEAD`, so the map fetches tiles from the store.
-- A bucket lock rule on the prefix `images/` with no end date makes the store refuse to delete or overwrite an image
-  object. The bucket holds the only copy of most originals.
-- A cache rule for the domain: eligible for cache, edge lifetime from the object's `Cache-Control`, and 404 answers
-  left uncached, so a strict build right after an upload sees the new keys.
-- A response header rule for paths ending in `.svg`:
-  `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src data:`, so an SVG opened on its
-  own runs no script.
-- An API token with Object Read and Write on the bucket alone. Its S3 credentials go to the maintainers who upload,
-  and CI holds none.
-
-## Deploy
-
-The site lives in a second bucket, `pages.bucket` in [site.yaml](#siteyaml), in the account of `assets.endpoint`.
-A Worker on the site's domain serves it. The bucket holds `dist/` as it is, each file under its path, and
-`harita deploy` keeps it in step with `dist/`:
-
-```
-harita deploy [--dry-run]
-```
-
-It lists the bucket, compares each key's ETag with the file's MD5, uploads the files that differ or are missing
-with their `Content-Type` and `Content-MD5`, eight at a time, scripts and stylesheets before pages, and deletes the
-keys `dist/` no longer holds. It prints a summary such as `uploaded 212 files (3.1 MB), deleted 4, 1,118 were in
-the bucket`. `--dry-run` prints the files it would upload and the keys it would delete and writes nothing. A run
-cut short leaves the bucket with this release's scripts and some of its pages, and the next run finishes it. On a
-terminal a line counts the files as they go up.
-
-The credentials come from `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`, the S3 credentials of an API token on
-the pages bucket alone. CI holds this token, while the assets bucket's token stays with the maintainers.
-
-### The Worker
-
-The package exports the Worker as `@openhistoryatlas/harita/worker`. A content project deploys it from a folder
-of two files:
-
-```js
-// worker/index.mjs
-import { site } from '@openhistoryatlas/harita/worker';
-export default site();
-```
-
-```toml
-# worker/wrangler.toml
-name = "openhistoryatlas"
-main = "index.mjs"
-compatibility_date = "2026-10-01"
-routes = [{ pattern = "openhistoryatlas.org/*", zone_name = "openhistoryatlas.org" }]
-[[r2_buckets]]
-binding = "SITE"
-bucket_name = "openhistoryatlas-site"
-```
-
-`wrangler deploy -c worker/wrangler.toml` takes `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. Every request
-to the site runs the Worker, which answers a path as `harita dev` does, both through `resolve` in
-`src/routes.mjs`:
-
-- A path ending in `/` serves its `index.html`.
-- A path without its slash whose folder has an `index.html` redirects to the path with the slash, with status 301
-  and the query string kept.
-- A path in `redirects.json` redirects to its target with status 301. The build writes this file with the paths
-  harita 0.4 served each image at, `/<story>/images/<id>.<ext>` and `/images/<id>.<ext>`, to the original in the
-  store.
-- Any other path the bucket lacks serves `404.html` with status 404.
-
-Each answer carries the object's `Content-Type` and `ETag` and `Cache-Control: public, max-age=600`, and a request
-with a matching `If-None-Match` gets 304. A script URL carries its version hash, so a new release's page asks for
-the new script. The Worker keeps each answer in the data centre's cache for the same ten minutes. A file in a
-versioned folder of `vendor/`, such as `vendor/maplibre-gl@5.24.0/`, gets `public, max-age=31536000, immutable`.
-
-### Cloudflare setup for the site
-
-- The pages bucket, in the Standard storage class, with no public access and no custom domain. The Worker reads it
-  through its binding.
-- An R2 API token with Object Read and Write on this bucket alone. Its S3 credentials go to the content repository
-  as the secrets `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
-- An API token for wrangler with Workers Scripts Edit and Workers Routes Edit on the account and the zone, as the
-  secret `CLOUDFLARE_API_TOKEN`, and the account id as `CLOUDFLARE_ACCOUNT_ID`.
-- The DNS records of the domain proxied, so the route hands every request to the Worker.
-- The Workers Paid plan, $5 a month for 10 million requests. A visit costs about five, and on the free plan the
-  site stops serving after 100,000 requests a day, until midnight UTC.
-- A billing notification at a monthly amount, so a busy month shows up before its bill does.
-
-The deploy job runs `harita deploy` before `wrangler deploy`, so the route is added once the bucket holds the site:
 
 ```yaml
-- run: ./node_modules/.bin/harita deploy
-  env:
-    AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-    AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-- run: ./node_modules/.bin/wrangler deploy -c worker/wrangler.toml
-  env:
-    CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-    CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-```
-
-## Use as a library
-
-The commands are also functions. Each takes the content project folder as `root`, which defaults
-to the working directory, and a `log` function for progress lines, which defaults to `console.log`. A
-problem in the content throws an `Error` whose message names the file and the field.
-
-```js
-import { build, check, dev, i18n, image, findImage, imageIndex, rehash, upload, deploy, resolve, zones, patterns, schema } from '@openhistoryatlas/harita';
-
-const { dist, stories } = await build({ root }); // writes root/dist, one card per story
-await build({ root, only: ['my-story'] });       // that story and the main page, the others as they were
-await build({ root, localAssets: true });        // copies the originals here and the tiles to root/dist/assets/
-const problems = check({ root, story: 'my-story' }); // every problem in the story's pages, [] when none
-const server = dev({ root, port: 8080 });       // watches, rebuilds and serves; an http.Server
-i18n({ root, lang: 'tr' });                     // writes the catalogues for one language
-const id = await image({ root, file, name: 'farm', caption: 'The farm', source }); // file: a path or a URL
-const held = findImage(imageIndex({ root }), { source, file }); // the image folder that holds it already, or null
-rehash({ root });                               // writes each image folder's file and sha256 into its image.yaml
-await upload({ root, story: 'my-story' });      // puts the story's images and tiles in the asset store
-await deploy({ root });                         // puts root/dist in the pages bucket and deletes what dist/ lacks
-const answer = await resolve('/my-story/en', exists, { redirect, query }); // { key, status } or { location }
-const pairs = zones({ root });                  // the zones of different stories that look like one region
-const alike = patterns({ root, fix: false });   // the family pairs that look alike, [] when none
-schema.check(schema.Page, data, 'page.yaml');   // the zod schema of every content file
-```
-
-`@openhistoryatlas/harita/schema` exports the schemas on their own, `@openhistoryatlas/harita/plans` the
-helpers for scripts that draw battle plans, and `@openhistoryatlas/harita/worker` the `site()` of
-[The Worker](#the-worker). Node 22.12 or later.
-
-## Develop harita
-
-```
-npm test                              # builds a copy of example/ and checks the errors the build must catch
-cd example && node ../bin/harita.mjs build --local-assets   # the example as a reader sees it, in example/dist/
-```
-
-## Content layout
-
-```
-site.yaml                   main page title and intro, languages, story order; optional
-content/
-  shared/battles/<id>/      a battle any story can include, see Battles
-  shared/images/<id>/       an image any story or battle can show, see Images
-  shared/zones/<id>/        a zone any story can show, see Shared zones
-  <story>/
-    story.yaml              title, languages, map extent, countries, land, zone families
-    shared/
-      zones/*.geojson       zones used by more than one page
-      routes/*.geojson
-      markers.yaml
-      battles/<id>/         a battle of this story alone
-      images/<id>/          an image of this story and its own battles
-    pages/
-      010-1919/             a folder without page.yaml is a header in the left nav
-        group.yaml          its title per language, optional, else the folder name
-        010-may/            headers nest to any depth
-          010-occupation/   a folder with page.yaml is a page
-            page.yaml       date, when, title, bbox, which zones, routes, markers are on, sources
-            text/<lang>.md  one file per language in story.yaml
-            zones/, routes/, markers.yaml   same formats as shared/, scoped by convention only
-        020-congresses/
-        030-sakarya/        a folder with include.yaml places a battle's pages, see Battles
-      020-1920/
-.cache/harita/              elevation tiles harita cut and each story's cleaned zones, kept between runs
-```
-
-The number prefix on every folder sets the order, at each level. Nothing else does, so three pages on
-one day, a page for a month and a page for a span of years sit side by side with no special casing.
-Leave gaps in the numbers, 010, 020, so a page can be inserted later.
-
-Ids are global within a story and come from the folder name without its prefix. A zone, route or marker
-defined in any page is visible to every page. The ids in a battle folder belong to the battle.
-
-Story, battle, image and zone folders can sit in groups, folders that only order a library, at any depth:
-`content/ottoman/ottoman-mehmed-ii/` or `content/shared/battles/ottoman/1402/ankara-1402/`. A folder that holds
-its `story.yaml`, `battle.yaml`, `image.yaml` or `zone.geojson` is the item and gives the name, and a name stays
-unique across the groups of a library. Commands name a story by its folder name, as in `--story ottoman-mehmed-ii`.
-A group of stories holds other files too, such as notes. A story's `zones/` folders take subfolders for their zone
-files the same way.
-
-Every file is checked against a schema in `src/schema.mjs` before use. The build stops on the first bad
-file and lists each problem with its field path, for example `bbox: Too small: expected array to have
->=4 items` or `(root): Unrecognized key: "markres"`. A misspelt key is an error. On top of the schema the
-build checks what spans files: duplicate ids, references to zones, routes, markers or images that do not
-exist, missing translations, and the page order against `when`.
-
-### site.yaml
-
-```yaml
-title: Histories
-intro: Pick a story.
+# site.yaml
+title: Open Body Book
+engine: beden
 languages: [en, tr]
-default_language: en
-stories: [turkiye-1919-1923]        # order on the main page, else alphabetical
-theme: cool                         # cool, mono, navy, parchment, sepia; readers can switch
-url: https://example.org/           # optional: where the site is published
-repository: https://github.com/openhistoryatlas/atlas   # optional: Contribute link on the main page,
-branch: main                                            # and a "Source on GitHub" link on every story
-assets:                                                 # the asset store, see Asset store
-  url: https://assets.example.org/                      # where readers and builds read objects, ends in /
-  bucket: example-assets                                # where harita upload writes them
-  endpoint: https://<account id>.r2.cloudflarestorage.com   # the bucket's S3 API
-pages:                                                  # the site's bucket, see Deploy
-  bucket: example-site                                  # where harita deploy writes dist/, in the account of the endpoint
-```
-
-`harita build` needs `assets`, or `--local-assets` for a project without a store. `harita deploy` needs `pages`.
-
-Without the file the main page takes the project folder name as its title and lists the stories
-alphabetically. The story page's backlink shows the same title.
-
-With `url`, every page carries a canonical link, hreflang links to its other languages, Open Graph tags
-for link previews and JSON-LD for search engines. The build then also writes `sitemap.xml`, `robots.txt`
-and `llms.txt` for the stories the main page lists. A story id names a folder beside the language folders
-of the main page, so it differs from every language code.
-
-### Languages
-
-Content strings are English inline. Every other language lives in one catalogue per story,
-`content/<story>/i18n/<lang>.yaml`, one per battle, image and zone folder, and one for the site, `i18n/<lang>.yaml`,
-keyed by the stable ids the content already has:
-
-```yaml
-# Occupation, and the landing at Samsun
-pages.occupation.title: "İşgal ve Samsun’a çıkış"
-markers.samsun.note: "Mustafa Kemal karaya çıkar, 19 Mayıs 1919"
-zones.british.name: "İtilaf (İngiliz) işgali, İstanbul ve Boğazlar"
-```
-
-Keys follow the content's ids:
-
-| Where the English is | Key |
-|---|---|
-| `site.yaml` title, intro | `site.title`, `site.intro` (site catalogue) |
-| `story.yaml` title, summary, span | `story.title`, `story.summary`, `story.span` |
-| `story.yaml` labels names | `labels.<Natural Earth name>` |
-| `group.yaml` title | `groups.<folder id>.title` |
-| `page.yaml` date, title, sources, map_sources | `pages.<id>.date`, `pages.<id>.title`, `pages.<id>.sources.<n>`, `pages.<id>.map_sources.<n>` |
-| an image or battle folder | the folder's own catalogue, see [Images](#images) and [Battles](#battles) |
-| markers | `markers.<id>.label`, `markers.<id>.note` |
-| zones, routes | `zones.<id>.name`, `routes.<id>.name` |
-| emblem feature names | `emblems.<page id>.<feature id>` |
-
-Long texts stay in `text/<lang>.md`. To add a language: list it in `story.yaml`, write the markdown
-files, then run
-
-```
-harita i18n <lang>
-```
-
-which writes or refreshes the catalogues with every key, the English source as a comment above each, and
-existing translations kept. `harita i18n <lang> --story <id>` refreshes the catalogues of that story and of the
-battle, image and zone folders it uses, and builds only that story to collect its strings, so a half edited story
-elsewhere leaves it working. Keys that no
-longer exist move to a commented block at the end. A missing
-value falls back to English; the build prints the coverage per language, and `harita build --strict`
-fails on any gap. Names (marker labels and battle commanders), citations and photo credits show as written
-in the source. A catalogue lists one only when it has another form in the language, such as a place name
-with its own spelling. These sit in a section at the end and never count as missing. Interface strings,
-buttons, labels, messages and theme names, ship with harita in `src/i18n/<lang>.yaml`. For a language harita does not ship in full, `harita i18n <lang>` also writes
-`i18n/ui/<lang>.yaml` in the project with every interface key, the English above each, and whatever harita
-already has filled in; the project file wins key by key. Interface gaps count in the coverage line and in
-`--strict` like content gaps, and a missing key shows in English.
-
-### Themes
-
-A theme is a set of colour tokens with a light and a dark variant, following the reader's system
-setting. A variant's optional `land` list holds up to eight tints for the countries, atlas style. The
-build picks one per country so that no two neighbours match. Without the list every country is `paper2`,
-which is how `mono` stays grey. Harita ships cool, mono, navy, parchment and sepia in `src/themes.yaml`. The site picks a default
-with `theme`, a story can override it with its own `theme` key, and a dropdown on every page lets the
-reader switch. The choice is remembered per browser.
-
-A project adds its own under `themes:` in `site.yaml`, same shape as the built in file:
-
-```yaml
-themes:
-  olive:
-    name: Olive                     # other languages: themes.olive in i18n/ui/<lang>.yaml
-    light: { paper: "#f2f3ea", paper2: "#e4e7d6", sea: "#d3dbd0", ink: "#242a1f", ink2: "#5f6a55", rule: "#bcc3ad", accent: "#a3362b", panel: "#fafbf3", route: "#5f6a55", border: "#75806a" }
-    dark:  { paper: "#1d2119", paper2: "#2c3226", sea: "#141811", ink: "#e7e9df", ink2: "#a3aa97", rule: "#414838", accent: "#e2685b", panel: "#242a1f", route: "#a3aa97", border: "#8d9681" }
-```
-
-Zone colours belong to the families in `story.yaml`, not to the theme, so a story keeps its zone colours
-across themes. A family can add a `pattern`, hatch, cross or dots, drawn in the family colour over the
-tint, for stories with more families than distinct colours. The build warns when two families that share a
-page have the same pattern and colours closer than 30 in CIELAB, in either the light or the dark variant.
-A family is one state, so a page shows each family in one zone: two states of one family read as one state
-divided. `harita check` reports a family with two zones on a page, the build warns about it, and `--strict`
-stops on it. Give each state a family of its own, and draw a state that shows as two zones as one zone.
-
-```
-harita patterns          # list the pairs that look alike, per story
-harita patterns --fix    # write a pattern into story.yaml for one family of each pair
-```
-
-The fix goes to the family of the pair that appears on fewer pages, with a pattern free on every page it
-appears on. It edits the family's `{ ... }` line in place and repeats until no pair is left.
-
-### story.yaml
-
-```yaml
-id: turkiye-1919-1923
-title: Türkiye, 1919 to 1923
-summary: From the occupation to the Republic.   # card text on the main page, optional
-cover: izmir-quay-5b2e07            # card image on the main page, an image the story can show, optional
-span: 1919 to 1923                  # card date line, optional, else the years from the pages' when
-theme: navy                         # override the site theme for this story, optional
-labels:                             # country names on the map, optional
-  countries: true
-  names: { Turkey: Anatolia, Syria: Ottoman Syria }   # instead of the Natural Earth name
-  hide: [N. Cyprus]                 # countries drawn without a name
-languages: [en, tr]
-default_language: en
-extent: [25, 35.6, 44, 42.6]        # west, south, east, north
-land: [Turkey]                      # zones are clipped to these countries
-countries: [Turkey, Greece, ...]    # Natural Earth names, drawn with borders
-families:
-  british: { priority: 0, color: "#a06b1f", color_dark: "#d19b4a" }
-  greek:   { priority: 3, color: "#2f6a9f", color_dark: "#6fa3d6" }
-  held:    { priority: 0, color: "#c62828", pattern: cross }   # hatch, cross or dots over the tint
-  ottoman: { priority: 1, color: "#b8333a", aliases: [ottomans] }   # battle families that take these colours, see Battles
-smoothing: 4                        # corner rounding passes before the clip
-max_zoom: 14                        # how close a page and a reader can zoom, 11 to 16, 11 by default; relief tiles follow to 15
-```
-
-### page.yaml
-
-```yaml
-date: 15 to 19 May 1919                       # display text, any wording
-when: { from: 1919-05-15, to: 1919-05-19 }    # optional, for the order check
-title: Occupation, and the landing at Samsun
-bbox: [25.5, 35.6, 43.5, 42.6]
-camera: { pitch: 55, bearing: 20 }  # optional, the view in 3D, see Relief and 3D
-zones: [british, greek1919]
-routes: []
-markers: [istanbul, izmir]
-sources:
-  - "Andrew Mango, Atatürk (1999), ch. 10."
-map_sources:                        # optional, map data the page draws beyond the base map
-  - text: "Lake Van: © OpenStreetMap contributors, ODbL"
-    url: https://www.openstreetmap.org/copyright
-```
-
-A translatable field is written once, in the story's default language. Other languages come from
-catalogues, see Languages below.
-
-`when` is machine readable: a year, a year-month, or a full date, with `to` optional. The build fails
-when a page starts before the page preceding it in folder order, naming both folders. Pages that share a
-`when` are fine. A page without `when` is skipped by the check.
-
-### text/<lang>.md
-
-Markdown. A line of the form `@image <id>` places that image, see [Images](#images), as a figure at that point in
-the text. A line that opens with a number and a full stop stays text, as Turkish ordinals do ("21. yüzyılda"), so a
-text has no numbered lists.
-Clicking a figure, or a marker's photo on the map, opens it large over the map.
-
-A link to a marker id names a place the page marks: `[Gelibolu’ya](@gallipoli)`. The link text is free, so a
-Turkish suffix stays in it. Pointing at the place, or reaching it with the Tab key, grows its marker and rings it in
-its colour, and pointing at the marker tints the place in the text. On a phone, where the text and the map take turns,
-the place reads as plain text. The id is one of the page's `markers`.
-
-### Images
-
-Every image is a folder of its own, so a story, its pages and its battles store one image however often they show
-it. Git holds the folder's text files, and the original stays on the machine that added it. The
-[asset store](#asset-store) holds the original and its sizes.
-
-```
-content/shared/images/hastings-knights-3f9a1c/      any story or battle can show it
-content/<story>/shared/images/<id>/                 that story and its own battles can show it
-  image.yaml           caption, credit, source, url, file, sha256
-  i18n/<lang>.yaml     the caption in other languages, keys image.caption and image.credit
-  image.jpg            the original, image.<ext>, ignored by git
+assets: { url: https://assets.example.org/, bucket: body-assets, endpoint: https://... }
 ```
 
 ```yaml
-# image.yaml
-caption: Norman knights and archers on the Bayeux Tapestry
-credit: Wikimedia Commons, public domain        # optional
-source: https://commons.wikimedia.org/wiki/File:Bayeux_Tapestry_scene51_Battle_of_Hastings_Norman_knights_and_archers.jpg
-url: https://upload.wikimedia.org/wikipedia/commons/thumb/…/1280px-Bayeux….jpg   # optional, the download
-file: image.jpg                                  # the original's name in the folder
-sha256: 9c1e…                                    # of the original, harita image and harita rehash write it
-default_language: en                             # the language of the caption, en by default
+# page.yaml: the book's fields, then the engine's under its key
+title: "The aorta"
+date: "1628"                       # optional, shown above the title and in the contents
+sources: ["Gray's Anatomy, ch. 58."]
+beden:
+  look: aorta
+  parts: { highlight: [aorta] }
 ```
 
-The folder name is the image's id: a name and six hex digits, so two images added at the same time on different
-branches get different folders. A text shows the image with `@image hastings-knights-3f9a1c`, a marker with
-`image:`, a battle card in its `images` list and a story's `cover` names it as well.
+A text is Markdown. `@image <id>` on a line of its own shows an image folder, and `[word](@id)` links a word to
+something the engine shows on the page, a marker on a map or a part of a model.
 
-`harita image <file or url> <name> --caption <text> [--credit <text>] [--source <url>] [--story <id>]` adds an
-image and prints its id. Given a URL, such as a Commons thumbnail or an attachment on a GitHub pull request, it
-downloads the original into the folder and writes `url`. It first looks through every image folder for the same
-`source` page, then for the same bytes, whether the folder's original is on this machine or not. A folder that holds
-the image already is used again, and one of another story moves to `content/shared/images/` so that both stories
-show it. Else it makes a folder with a fresh suffix, in `content/shared/images/` or with `--story` in the story's,
-with the default language of the story or of `site.yaml`. `findImage` in the library runs the same lookup, so a
-download script can skip what the content holds.
-
-An original is at most 20 MB, holds bytes of the format its extension names, and carries no location in its EXIF
-or XMP metadata. An SVG may not hold a script, an event attribute such as `onload` or a reference to another file.
-`harita image` and `harita upload` refuse any other original, and harita leaves an original's bytes as they are.
-
-`harita upload` makes two WebP sizes of every original, fitted inside 1280 × 1280 and 320 × 320 pixels. A JPEG,
-PNG, GIF or WebP keeps its size where it is smaller, an SVG is drawn at each size, and an animated GIF stays
-animated. The quality is 80, and 90 for a PNG or SVG, so the lettering of maps and diagrams stays sharp.
-
-| Use | Object |
-|---|---|
-| marker photos | the 320 px size |
-| text images, battle card slides, the lightbox, covers on the main page | the 1280 px size |
-| `og:image` and the Markdown export | the original, and for `og:image` of an SVG the 1280 px size |
-
-`harita build --strict` holds every original on this machine to the `sha256` its `image.yaml` records. After an
-original changes, `harita rehash` writes its `file` and `sha256`, and removes `url`, which downloads the old bytes.
-
-Moving an image folder from a story's `shared/images/` to `content/shared/images/` keeps every reference to it
-working, and its objects in the store.
-
-### Zones
-
-A zone is a GeoJSON Feature with a Polygon geometry, or a MultiPolygon for a state whose land lies in parts, such
-as a town cut off inland, and these properties:
-
-```json
-{ "id": "greek1920", "family": "greek", "name": { "en": "...", "tr": "..." }, "clip": ["Turkey"] }
-```
-
-Draw zones rough. The build first subtracts from every zone the zones of families with a lower priority
-number that share a page with it, so neighbours of different families meet along one edge. It then treats
-all zones as one coverage: every boundary splits into arcs between nodes, the points where three or more
-zones meet or two part ways, and each arc is rounded once with its nodes held in place. Neighbours keep a
-common edge however many zones meet at a point, so rounding opens no gaps. Last, each zone is clipped to the
-land polygon, or to the countries in its own `clip` list when given, which keeps coasts exact. Zones in
-the same family never cut each other, so one family holds several dated shapes. The story ships all zones
-as one TopoJSON topology, which stores an edge that several zones share once. Each edge keeps the detail
-that the closest page showing it needs, plus one zoom level.
-
-Drawing rules that follow from this:
-
-- Extend a zone into the sea freely. The coast comes from the clip.
-- Overlap a neighbour of higher priority on purpose, and only on the side where that neighbour is. The
-  build trims the overlap along the neighbour's edge.
-- A page shows each family in one zone, see [Themes](#themes).
-- The build fails when a zone is left with land outside the clip or overlaps another family by more
-  than 1 km². It lists pieces under 50 km² so a stray sliver is visible next to the real islands.
-
-### Shared zones
-
-A zone several stories show, such as the Ottoman lands of 1402 in the stories of Bayezid I and of Timur, lives in
-`content/shared/zones/<id>/` and is drawn once:
+## Commands
 
 ```
-content/shared/zones/ottoman-1402/
-  zone.geojson         the zone as above, without an id: the folder name is the id
-  i18n/<lang>.yaml     the name in other languages, key zone.name
+kitap build [--strict] [--local-assets] [--only <story>] [--story <id>] [--out <dir>]
+kitap check <story> [page id ...] [--places]
+kitap dev [--story <id>] [--out <dir>] [--port <n>]
+kitap i18n <lang> [--story <id>]
+kitap image <file or url> <name> --caption <text> [--credit <text>] [--source <url>] [--story <id>]
+kitap rehash | kitap upload [--story <id>] [--dry-run] | kitap deploy [--dry-run]
 ```
 
-A page or an `include.yaml` names it by id, as a zone of the story. Its `family` is the story's family of that id
-or alias, see [Battles](#battles), and its `clip` countries are the story's. The story trims and rounds it with its
-own zones, so each story draws it to fit. `default_language` in its properties gives the language of its name, en
-by default. End the id with the year, as for battles.
+An engine's own binary runs the same commands with its engine, `harita build` for instance, and adds its own.
+`--strict` fails on a missing translation or an object the store lacks; `--local-assets` shows the files on this
+machine before they are uploaded.
 
-A story that shows the outline of a zone under its own name or in its own family writes a `zones.yaml`, in
-`shared/` or a page folder, as it writes a `markers.yaml`:
+## An engine
 
-```yaml
-# content/viking-age/shared/zones.yaml
-sicily-970:  { zone: sicily, name: Emirate of Sicily, family: islam }
-sicily-1066: { zone: sicily-970, name: Norman Sicily }   # the outline of a zone of the story, its family too
-```
-
-Each entry is a zone of the story with its own id. `zone` names the zone whose outline it takes, of the story or
-shared. `name` and `family` replace that zone's where they are given, so the colour and the pattern come from the
-family the story chose. The name is the story's text, translated in its catalogue as `zones.<id>.name`. The entry
-is cut to the countries of its own `clip`, else to the story's land, whatever the clip of the zone it names.
-
-`harita zones` finds the zones of different stories that look like one region. Names can mislead, and two hands
-draw one border with different points, so it compares land: each zone cut to the Natural Earth land it covers, at
-1:50m, then the land both cover over the land either covers. It prints the pairs at 90% or more, the same land from
-98%, a copy of the same drawing found by a hash of its points, the widest gap between the two borders in km and
-where it is. It writes `.cache/harita/zones.html` to look at them, the two zones over the land with the gap marked.
-
-```
-harita zones                            # every pair of zones of two stories, or of a story and content/shared/zones/
-harita zones --same-story               # pairs within one story too, where dated shapes of a family overlap on purpose
-harita zones --like new.geojson         # the zones a zone about to be added looks like
-harita zones --share timur/ottoman-1402 --replace rise-of-the-ottomans/ottoman-lands-1402
-harita zones --apart napoleonic-wars/sicily-1799 viking-age/sicily-970 --why "the Bourbon kingdom, the emirate"
-```
-
-`--share` moves a story's zone into `content/shared/zones/` with its translated name, and the story's pages name it
-as before. Each `--replace` zone of another story takes the shared outline through a `zones.yaml` entry beside it
-that keeps its id, name and family, so its pages and catalogue stay as they were.
-
-Two zones that cover the same land and stay apart, two states on one island, go into
-`content/shared/zones/apart.yaml` with `--apart` and the reason. The list keeps both drawings' hashes, so a pair
-comes back when either zone is redrawn, and an entry whose zone is gone is reported. A copy cannot be kept apart:
-one outline under two names is `--share` with `zones.yaml`.
-
-Every build runs the same comparison: it warns about the pairs, the pairs kept apart left out, and writes
-`.cache/harita/zones.html`. `harita build --strict` stops on a zone that copies another one. The land cuts and the
-overlaps are kept in `.cache/harita/` by the drawings they come from, so a build measures only the zones that changed.
-
-### Routes
-
-A GeoJSON Feature with a LineString geometry and properties `id`, `name`, `style` (`solid` or
-`dashed`), `arrows` and `color`. A route draws itself on when a page first shows it, with chevrons along it
-pointing the way it was travelled, from its first point to its last. Set `"arrows": false` for a line that
-marks a front or a border rather than a movement.
-
-`color` names the family that travels the route, such as `"color": "ottomans"`, and the line, its chevrons and
-its legend entry take that family's colour. A route without it takes the theme's `route` colour, the grey of `ink2` in
-the themes harita ships, for a route that belongs to no one side, such as a trade route.
-
-The routes of one colour on a page are the legs of one march. When a march has two legs or more, each leg shows its
-number at its start, in the order the page lists them, on the map and in the legend. The last leg has the full
-colour, and the ones before it are lighter or darker, the earlier the more, keeping their hue. A route with `"arrows": false`
-is no leg and keeps the full colour.
-
-Routes travelled at the same time, such as the columns of one army, go in a list of their own in the page's
-`routes`: `routes: [[column-west, column-east], pursuit]`. They draw together and count as one leg, with one number
-and one shade.
-
-A journey out and back is two routes, so each leg keeps its own arrows. Give the return an `offset` in pixels,
-for example `"offset": 5`, and it runs beside the way out instead of on top of it; positive values shift
-to the right of the direction of travel. Routes that are new on a page draw one after another, in the order
-the page lists them, so the reader sees the first move first.
-
-### Battles
-
-A battle is a folder that holds its card, its pages and its translations. A story includes the folder, so two
-stories that cover one battle share it. The folder sits in `content/shared/battles/<id>/`, where every story can
-use it, or in `content/<story>/shared/battles/<id>/` for one story. The folder name is the battle's id. End it with
-the year, `kosovo-1389` and `kosovo-1448`, so that battles of one place stay apart.
-
-```
-content/shared/battles/ankara-1402/
-  battle.yaml            the card, colours and zoom
-  markers.yaml, routes/  optional, markers and routes for the battle's pages
-  i18n/<lang>.yaml       the battle's catalogues
-  pages/                 optional, the battle's pages, in the format of a story's pages/
-```
-
-The card shows as a crossed swords marker and opens on the map in the shape of a Wikipedia infobox: name, date,
-result, one column per side with commanders, strength and casualties, photos stepped with arrows, and a source
-link. An optional `front` line is drawn while a page shows the battle.
-
-```yaml
-# battle.yaml
-lnglat: [32.95, 40.03]
-name: Battle of Ankara
-date: 20 July 1402
-result: Timurid victory
-source: https://en.wikipedia.org/wiki/Battle_of_Ankara
-front: [[32.90, 40.05], [32.98, 40.00]]   # optional
-default_language: en                      # the language this folder is written in, en by default
-max_zoom: 14                              # optional, how close the battle's pages zoom, when closer than the story's
-families:                                 # the colours the sides, battle plans and markers name
-  ottoman: { color: "#b8333a", color_dark: "#e0646a" }
-  timurid: { color: "#2f6a9f", color_dark: "#6fa3d6" }
-images: [bayezid-captive-5c01d7]          # optional, stepped through with arrows on the card
-sides:
-  - name: Timurid Empire
-    color: timurid                        # a family of the battle or a hex colour
-    commanders: [Timur, Shah Rukh]
-    strength: 140,000
-  - name: Ottoman Empire
-    color: ottoman
-    commanders: [Bayezid I]
-```
-
-A story shows a battle in one of two ways:
-
-- A page with `battle: ankara-1402` shows the card. One battle per page keeps the map readable.
-- A folder in the page tree that holds an `include.yaml` places the battle's pages there, under a header with the
-  battle's name. The folder's number sets the place, and the `when` check runs over the battle's pages where they
-  sit.
-
-```yaml
-# content/timur/pages/030-anatolia/040-ankara/include.yaml
-battle: ankara-1402
-zones: [timurid-1402, ottoman-1402]   # optional, story zones shown on every page of the battle
-markers: [ankara]                     # optional, story markers shown on every page of the battle
-```
-
-A battle's page is a folder with `page.yaml` and `text/<lang>.md`, and optionally `markers.yaml` and `routes/`,
-as in a story. Its zones come from the include, and `battle: true` opens the battle's card. Its markers and routes
-are the battle's own. A battle shows the images of `content/shared/images/`, and a story's own battle those of the
-story as well. In the story the page's id is `<battle>-<page>`, so its address is
-`/timur/en/ankara-1402-deployment/`.
-
-A battle family takes the colours of the story family with the same id, so the battle's sides match the story's
-zones. A story family with another id lists the battle's in `aliases`:
-
-```yaml
-families:
-  timur: { priority: 1, color: "#2f6a9f", aliases: [timurid] }
-```
-
-A battle family that no story family matches keeps the battle's colours, and the build prints a warning.
-
-The battle's other languages come from its `i18n/<lang>.yaml`, keyed like a story's catalogue with `battle.` in
-front of the card's fields: `battle.name`, `battle.sides.0.name`, `pages.deployment.title`. `harita i18n <lang>`
-writes it. A battle shows in every language of the story that uses it, and a string or a text it lacks shows in
-its `default_language`. The build prints each battle's coverage, and `--strict` fails on a gap.
-
-### Emblems
-
-A page can draw a decorative emblem on the map as geometry, so it zooms with the map:
-
-```yaml
-emblem: { kind: crescent-star, center: [35.4, 39.1], width_km: 320, color: "#ffffff" }
-```
-
-The kind names `plugins/emblems/<kind>.mjs` in the content project, else an emblem harita ships, so a
-project file of the same name replaces a built-in kind. A plugin exports a function
-`(params, { turf, families }) => FeatureCollection` of polygons. `families` is the story's families from
-`story.yaml`, or on a battle's page the battle's from `battle.yaml`.
-
-Each feature's properties set how it looks and what the reader can point at:
-
-- `family`: filled with that family's colour, the light or the dark one to suit the theme.
-- `color`: the fill when there is no `family`, a hex colour the same in every theme.
-- `id`: features that share an id highlight together, so a shape drawn in several pieces acts as one.
-- `hit`: true for a feature that is never drawn and only widens the area the reader can point at, such as the
-  gaps between the pieces of a dotted line.
-- `name`: shown beside the pointer when the reader points at the feature, or at the top of the map after a tap,
-  while the rest of the emblem fades and the feature gains an outline. A named feature needs an `id`. Other
-  languages come from the catalogue under `emblems.<page id>.<id>`.
-
-### Battle plans
-
-`battle-plan` ships with harita. It draws a battle at one moment: troops, movements, water and works, with
-sizes in metres.
-
-```yaml
-emblem:
-  kind: battle-plan
-  land:    [{ area: [[lon, lat], ...] }]
-  water:   [{ path: [[lon, lat], ...], width: 80 }, { area: [[lon, lat], ...] }]
-  works:   [{ side: rome, path: [[lon, lat], ...], width: 40, style: trench }]
-  units:   [{ side: carthage, type: infantry, at: [lon, lat], width: 1800, depth: 400, facing: 315, bow: 300 }]
-  arrows:  [{ side: rome, path: [[lon, lat], ...], width: 160, style: dashed }]
-  clashes: [[lon, lat], { at: [lon, lat], size: 250 }]
-```
-
-- `side` is a family of the story, or of the battle on a battle's page, `neutral` for grey, or a hex colour.
-  Water takes the `water` family when there is one, else a blue.
-- `land` fills ground that the base map's coast misses at the scale of a battle, such as an island in an
-  estuary, in the land colour of the nearest country in every theme. Water drawn after it cuts channels through it.
-- `facing` is the compass bearing a unit faces. `width` runs along its front and `depth` from front to back.
-  `bow` bends the front: a positive value pushes the centre towards the enemy, a negative one draws it back.
-- `count` sets the number of pieces in a unit drawn as a row, and `rows` the lines of ships or wagons. A wagon fort spreads its `count` wagons round the ring, and `gaps: [0, { bearing: 135, wagons: 3 }]` leaves
-  wagons out at those compass bearings from its centre, for a gate, an opening or a breach.
-- Arrows curve through their points. `dashed` marks a retreat, and `fire` marks shooting, drawn as three
-  thin arrows that spread towards the target. Each arrow has a thin edge in the paper colour, and a later
-  arrow draws over an earlier one. A work is a straight wall, or a zigzag with `style: trench`.
-- Any unit, arrow, work or water can carry a `name`, shown when the reader points at it. Pieces with the same
-  `id` highlight together, and other languages come from the catalogue as for any emblem.
-
-| type         | drawn as                              | for                                     |
-| ------------ | ------------------------------------- | --------------------------------------- |
-| `infantry`   | a block with an X                     | foot soldiers, the default              |
-| `cavalry`    | a block with one diagonal             | horsemen                                |
-| `knights`    | a block with two diagonals            | knights, cataphracts, heavy cavalry     |
-| `pikes`      | files ending in points                | a phalanx, pikemen, hoplites            |
-| `light`      | a loose row of squares                | skirmishers, slingers, javelin men      |
-| `archers`    | a loose row of chevrons               | archers, crossbowmen                    |
-| `irregular`  | the outline in dashes                 | militia, tribesmen, guerrillas          |
-| `elephants`  | a row of discs                        | war elephants                           |
-| `chariots`   | cars between two wheels, with a pole  | chariots                                |
-| `siege`      | wedges on a base                      | siege engines, towers, rams             |
-| `artillery`  | wheels with a barrel to the front     | guns                                    |
-| `armour`     | a block with a track cut into it      | tanks, armoured vehicles                |
-| `aircraft`   | planes in a V                         | air units                               |
-| `ships`      | a line of hulls                       | fleets                                  |
-| `submarines` | hull outlines                         | submarines                              |
-| `camp`       | a square ring                         | a camp                                  |
-| `square`     | a square ring                         | an infantry square                      |
-| `fort`       | walls round a court, corner bastions  | forts and castles, `width` across       |
-| `wagons`     | carts end to end, chained, a board to the front | war wagons in a line, `rows` lines on the march |
-| `wagon-fort` | carts chained in an oval ring, boards outwards | a wagon fort, `depth` 0.6 of `width` unless set |
-| `handguns`   | a loose row of squares with a barrel each | handgunners, arquebusiers, musketeers  |
-| `pavises`    | a row of tall shields                 | pavise bearers, a shield wall           |
-
-A battle plan of one or two kilometres needs a closer zoom than the default, so a battle with battle plans
-sets `max_zoom` in `battle.yaml`. The example's battle draws one.
-
-A battle with several phase pages is easier to lay out from a script than by hand. The script works in a
-local frame, metres along and across the battle line, and writes each phase into its page:
+An engine is a package whose default export is a module with an id and hooks. Kitap resolves `engine: <id>` of
+site.yaml to `@openbooknetwork/<id>` in the project's packages, else to `plugins/engines/<id>.mjs`.
 
 ```js
-import { frame, planWriter } from '@openhistoryatlas/harita/plans';
-
-const writePlan = planWriter('content/punic-wars');    // the story folder, or a battle folder
-const f = frame([16.133, 41.297], 330);   // origin [lon, lat]; u runs along bearing 330, w along 330 + 90
-f.p(1800, -500)                           // [lon, lat] of the point u = 1800 m, w = -500 m
-f.path([[0, 0], [1800, -500]])            // the same for a list of points
-f.face(90)                                // the compass bearing of +w, for a unit's facing
-f.box([[-3000, -2000], [3000, 2000]])     // a bbox around local points, padded by 400 m
-writePlan('pages/040-second-war/010-invasion/050-cannae/020-cannae-deployment', { emblem, markers, show, routes, bbox });
+export default {
+  id: 'beden',
+  dir: PKG,                                        // the package folder, where its libraries resolve from
+  schemas: { story: StoryBody, page: PageBody },   // zod objects for the fields under the engine's key
+  ui: new URL('./i18n/', import.meta.url),         // strings laid over kitap's: hint, tab_map, map_data, ...
+  client: { script: URL, styles: URL, module: true, libraries: [[pkg, file]], imports: { three: [pkg, folder, file] } },
+  read: {
+    story(story, ctx) {},              // the story's own files; returns the state the other hooks read as ctx.state
+    folder(dir, scope, ctx) {},        // files in shared/ and in a page's folder
+    include(dir, scope, ctx) {},       // an include.yaml in the page tree: returns a page or group node, or null
+    prepare(ctx) {},                   // after every folder is read, before the pages
+    page(fields, { dir, at, own, pid, scope, core }, ctx) {}, // returns { data, links, credits }
+    finish({ story, pages, texts, images, coverImage }, ctx) {}, // returns { images, warnings, folders }
+  },
+  bundle(content, ctx) {},             // returns { data, families, credits }: data goes to the viewport under the id
+  objects(content, ctx) {},            // returns { groups: { dir: [keys] }, ... }: what the store must hold
+  make({ stories, cache, out, log }) {}, // writes each object to out/<key>, for --local-assets and upload
+  site({ root, cache, strict, log, stories, fail }) {}, // checks across the stories before the build
+  describeObjects(keys) {},            // the objects in words, for messages
+};
 ```
 
-`writePlan` sets the page's `emblem` and `bbox`, writes its own markers to `markers.yaml` and its routes to
-`routes/`, and sets the `markers` and `routes` lists. `show` adds markers defined elsewhere. Routes next to each
-other with the same `group`, such as `group: 'columns'`, go in the `routes` list as one group. The page keeps
-every other key and its comments.
+`ctx` carries the project's readers (`readYaml`, `readJson`, `library`, `resolveImage`, `translatorFor`), the
+story's translator `T`, `fail`, `attempt`, `warn`, the `scope` factory and the `storyScope`, and for an engine that
+includes pages, `walk`, `pagesIn` and `readPage`. A `links` object answers the text's `[word](@id)` links:
+`has(id)`, `attr(id)`, `missing(name, id)` and `names(lang)`.
 
-`harita coast <country> <w> <s> <e> <n>` prints the coast the map draws inside a box, as `[lon,lat]` points,
-so a plan's water and walls can follow it. The same list comes from `coast(country, [w, s, e, n])` in
-`@openhistoryatlas/harita/plans`.
+The client script sets `window.KITAP_ENGINE = host => ({ show, lang, theme, resize, escape, point, highlight })`
+and, as a module, dispatches `kitap-engine` once set. `host` carries the bundle `B`, the stage's elements under
+`el`, `here()`, `lang()`, `L`, `T`, `css`, `pref` and the shell's other helpers. The engine owns everything inside
+`el.map`, the legend and the view group; the shell owns the contents, the text, the tabs and the lightbox.
 
-### Relief and 3D
+The test engine in `test/engines/plain.mjs` shows the least an engine needs.
 
-The map shades the relief from elevation tiles: Terrarium PNGs from the
-[terrain tiles on AWS](https://registry.opendata.aws/terrain-tiles/). A story needs the tiles of its `extent`
-down to zoom 7, then of each page's `bbox`, with a tenth more on every side, at the zooms the page opens at, up
-to one past the page's max zoom and at most 15. `harita upload` cuts them into `.cache/harita/` in the project
-and puts them in the [asset store](#asset-store), and the map reads them from there. A `--local-assets` build
-copies them to `dist/assets/terrain/`. The sea is flattened to 0 m and stays unshaded. A country sized story comes
-to about 25 MB, of which a reader downloads only the tiles in view. The shading takes its colours from the theme.
+## Work on it
 
-The map opens flat and north up. A 2D | 3D switch at the top of the map tilts it over the 3D terrain, and the
-browser remembers the choice for later pages. In 3D a page tilts with its own `camera`, else with the defaults:
-
-```yaml
-camera: { pitch: 55, bearing: 20, exaggeration: 2 }
 ```
-
-`pitch` is the tilt in degrees from straight down, 10 to 60, 50 by default. `bearing` turns the view
-clockwise from north, 0 by default. `exaggeration` multiplies the heights, 2 by default. In 3D the reader can
-turn and tilt the view by dragging with the right mouse button or with Ctrl held, or with two fingers. The
-next page opens at its own view.
-
-The "Map data" list names Natural Earth for borders and coasts and every elevation source whose area
-overlaps the story's extent, each with the credit its licence asks for.
-
-### Markers
-
-```yaml
-samsun:
-  lnglat: [36.33, 41.29]
-  icon: star                        # any Lucide icon name, see https://lucide.dev/icons
-  color: greek                      # a family, or leave out for the accent colour
-  image: samsun-1919-4be2a0         # optional, shows a photo thumbnail on the map
-  label: Samsun
-  note: Mustafa Kemal lands, 19 May 1919
+npm install
+npm test
 ```
-
-## Adding a story
-
-Create `content/<id>/story.yaml` and at least one page folder with `page.yaml` and a text file per
-language. Run the build. Every story becomes `dist/<id>/`, and `harita upload --story <id>` puts its images and
-elevation tiles in the asset store, see [Workflow for a story](#workflow-for-a-story).
-
-While writing, `npx harita check <id> [page id ...]` reads the story's pages, their texts, images, markers,
-battles, routes and emblems, and prints every problem it finds, or `ok`. It leaves out the zone geometry and
-the elevation tiles, so it takes about a second. Page ids narrow it to those pages and the files outside any
-page. With `--places` it also lists, per text file, the page's markers whose label the text names without a link.

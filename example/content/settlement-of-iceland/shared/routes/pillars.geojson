@@ -1,5 +1,0 @@
-{
-  "type": "Feature",
-  "properties": { "id": "pillars", "name": { "en": "Ingólfr's high seat pillars drift west" }, "style": "dashed" },
-  "geometry": { "type": "LineString", "coordinates": [[-16.63, 63.80], [-19.0, 63.45], [-21.5, 63.75], [-21.94, 64.15]] }
-}

@@ -126,7 +126,7 @@ export function findImage(index, { source = null, file = null, sha256: hash = fi
     if (hit) return { ...hit, by: 'source' };
   }
   if (hash) {
-    // a folder without a sha256 hashes its original, which only happens before harita rehash
+    // a folder without a sha256 hashes its original, which only happens before kitap rehash
     const hit = index.find(i => (i.sha256 ?? (i.file ? sha256(i.file) : null)) === hash);
     if (hit) return { ...hit, by: 'sha256' };
   }
@@ -146,17 +146,17 @@ export async function downloadOriginal(url) {
   return { bytes, ext };
 }
 
-// harita image: the folder that holds the same source or bytes, moved to content/shared/images/ when another story owns
+// kitap image: the folder that holds the same source or bytes, moved to content/shared/images/ when another story owns
 // it, else a new one named <name>-<six random hex digits>, so branches adding images at once never clash. file is a
 // path or a URL to download the original from. Returns the id.
 export async function image({ root = process.cwd(), file, name, caption, credit = null, source = null, story = null, log = console.log } = {}) {
-  if (!file || !name || !caption) throw new Error('usage: harita image <file or url> <name> --caption <text> [--credit <text>] [--source <url>] [--story <id>]');
+  if (!file || !name || !caption) throw new Error('usage: kitap image <file or url> <name> --caption <text> [--credit <text>] [--source <url>] [--story <id>]');
   if (!/^[a-z0-9][a-z0-9-]*$/.test(name)) throw new Error(`"${name}": a name is lowercase letters, digits and dashes, such as hastings-knights`);
   const url = /^https?:\/\//i.test(file) ? file : null;
   if (!url && !fs.existsSync(file)) throw new Error(`${file}: no such file`);
   if (!url && !FORMAT[path.extname(file).toLowerCase()]) throw new Error(`${file}: an image is a .jpg, .jpeg, .png, .webp, .svg or .gif file`);
   const stories = storyFolders(path.join(root, 'content'), p => path.relative(root, p));
-  if (!stories.size) throw new Error('content/: no story.yaml found, run harita image from a content project');
+  if (!stories.size) throw new Error('content/: no story.yaml found, run kitap image from a content project');
   if (story && !stories.has(story)) throw new Error(`"${story}" is not a story folder under content/`);
   // the fields as image.yaml will hold them, checked before anything is fetched or written
   const fields = { caption, ...(credit ? { credit } : {}), ...(source ? { source } : {}), ...(url ? { url } : {}) };
@@ -195,7 +195,7 @@ export async function image({ root = process.cwd(), file, name, caption, credit 
   return id;
 }
 
-// harita rehash: writes the file and sha256 of every image folder whose original is on this machine into its
+// kitap rehash: writes the file and sha256 of every image folder whose original is on this machine into its
 // image.yaml, where they are missing or no longer match. A new sha256 drops url, which downloads the old bytes.
 // Returns the folders it wrote.
 export function rehash({ root = process.cwd(), log = console.log } = {}) {

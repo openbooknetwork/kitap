@@ -54,7 +54,7 @@ export function translator({ langs, defaultLang, catalogues, where, fail }) {
 // translations kept, keys that no longer exist moved to a commented block at the end.
 export function catalogueText(lang, entries, existing, heading) {
   const q = s => JSON.stringify(s ?? '');
-  const lines = [`# ${heading}`, `# Keys are stable ids, the comment above each one is the source text. Empty values fall back to the`, `# default language, and harita build --strict reports them. Regenerate with: harita i18n ${lang}`, ''];
+  const lines = [`# ${heading}`, `# Keys are stable ids, the comment above each one is the source text. Empty values fall back to the`, `# default language, and kitap build --strict reports them. Regenerate with: kitap i18n ${lang}`, ''];
   let filled = 0, total = 0;
   const emit = e => { const value = existing[e.key] ?? e.inline?.[lang] ?? ''; if (value && !e.shared) filled++; if (!e.shared) total++; lines.push(`# ${e.source.replace(/\n/g, ' ')}`, `${e.key}: ${q(value)}`, ''); };
   entries.filter(e => !e.shared).forEach(emit);

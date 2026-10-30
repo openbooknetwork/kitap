@@ -1,20 +1,20 @@
-// The asset store: an S3 bucket that holds the images and elevation tiles under keys harita computes, and per story a
-// hash tree of the keys it needs. Reads go through the store's public URL, uploads through its S3 endpoint.
+// The asset store: an S3 bucket that holds the images and the engine's objects under keys the build computes, and per
+// story a hash tree of the keys it needs. Reads go through the store's public URL, uploads through its S3 endpoint.
 import crypto from 'crypto';
 import { AwsClient } from 'aws4fetch';
-import { tileKey } from './terrain.mjs';
 
 export const TREE_FORMAT = 1;
 const IMMUTABLE = 'public, max-age=31536000, immutable';
 const hashLines = lines => crypto.createHash('sha256').update(lines.join('\n')).digest('hex');
 
-// A story's hash tree: a directory per image folder with its keys, and terrain/<z> per zoom with that zoom's tiles. A
-// directory's hash is the sha256 of its sorted keys, and the root's the sha256 of its sorted "<hash> <directory>"
-// lines. images are { dir, keys } with dir the folder's path in the project, tiles are "z/x/y".
-export function storyTree(story, images, tiles) {
+// A story's hash tree: a directory per image folder with its keys, and a directory per group of the engine's objects
+// with its keys. A directory's hash is the sha256 of its sorted keys, and the root's the sha256 of its sorted
+// "<hash> <directory>" lines. images are { dir, keys } with dir the folder's path in the project, groups is
+// { directory: [keys] }.
+export function storyTree(story, images, groups = {}) {
   const keysOf = {};
   for (const { dir, keys } of images) keysOf[dir] = Object.values(keys);
-  for (const t of tiles) (keysOf[`terrain/${t.split('/')[0]}`] ??= []).push(tileKey(t));
+  for (const [d, keys] of Object.entries(groups)) (keysOf[d] ??= []).push(...keys);
   const dirs = {};
   for (const d of Object.keys(keysOf).sort()) { const keys = [...new Set(keysOf[d])].sort(); dirs[d] = { hash: hashLines(keys), keys }; }
   return { format: TREE_FORMAT, story, root: hashLines(Object.entries(dirs).map(([d, x]) => `${x.hash} ${d}`).sort()), dirs };
@@ -69,8 +69,8 @@ export function storeReader(url, opts = {}) {
 const unescapeXml = s => s.replace(/&(amp|lt|gt|quot|apos|#(\d+));/g, (_, e, n) => n ? String.fromCodePoint(n) : { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" }[e]);
 
 // Writes, lists and deletes objects through the S3 endpoint with the credentials of AWS_ACCESS_KEY_ID and
-// AWS_SECRET_ACCESS_KEY. command names the harita command in the error for missing credentials.
-export function storeWriter({ endpoint, bucket }, { command = 'harita upload', ...opts } = {}) {
+// AWS_SECRET_ACCESS_KEY. command names the command in the error for missing credentials.
+export function storeWriter({ endpoint, bucket }, { command = 'kitap upload', ...opts } = {}) {
   const { AWS_ACCESS_KEY_ID: accessKeyId, AWS_SECRET_ACCESS_KEY: secretAccessKey } = process.env;
   if (!accessKeyId || !secretAccessKey) throw new Error(`${command} writes with the S3 credentials of an API token for the bucket: set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY`);
   const aws = new AwsClient({ accessKeyId, secretAccessKey, service: 's3', region: 'auto', retries: 0 });
@@ -129,23 +129,25 @@ export function missingIn(held, tree) {
   return { missing: keys.filter(k => !held.has(k)), complete: held.has(`meta/${tree.story}/${tree.root}.json`) };
 }
 
-// The missing objects of a tree in words: the image folders by path, and the tiles by count.
-export function describeMissing(tree, missing) {
+// The missing objects of a tree in words: the image folders by path, and the engine's objects as the engine describes
+// them, else by count.
+export function describeMissing(tree, missing, describe = null) {
   const set = new Set(missing);
-  const folders = Object.entries(tree.dirs).filter(([d, x]) => !d.startsWith('terrain/') && x.keys.some(k => set.has(k))).map(([d]) => d);
-  const tiles = missing.filter(k => k.startsWith('terrain/')).length;
-  return [folders.length && `the images of ${folders.join(', ')}`, tiles && `${tiles} elevation tile${tiles === 1 ? '' : 's'}`].filter(Boolean).join(' and ');
+  const folders = Object.entries(tree.dirs).filter(([d, x]) => !d.startsWith('objects/') && d.includes('/images/') && x.keys.some(k => set.has(k))).map(([d]) => d);
+  const others = missing.filter(k => !k.startsWith('images/'));
+  const described = others.length ? describe?.(others) ?? `${others.length} object${others.length === 1 ? '' : 's'}` : '';
+  return [folders.length && `the images of ${folders.join(', ')}`, described].filter(Boolean).join(' and ');
 }
 
-// harita build --strict: every object the trees name is in the store. Throws with the stories that lack some, named by
+// kitap build --strict: every object the trees name is in the store. Throws with the stories that lack some, named by
 // each tree's dir, the story folder.
-export async function checkStore({ url, trees, log = console.log, ...opts }) {
+export async function checkStore({ url, trees, log = console.log, describe = null, ...opts }) {
   const reader = storeReader(url, opts), problems = [];
   for (const tree of trees) {
     const { missing } = await missingKeys(reader, tree);
-    if (missing === null) problems.push(`${tree.dir}: the store holds no upload of this story, harita upload --story ${tree.story} puts its images and tiles there`);
-    else if (missing.length) problems.push(`${tree.dir}: the store lacks ${describeMissing(tree, missing)}, harita upload --story ${tree.story} puts them there`);
+    if (missing === null) problems.push(`${tree.dir}: the store holds no upload of this story, kitap upload --story ${tree.story} puts its objects there`);
+    else if (missing.length) problems.push(`${tree.dir}: the store lacks ${describeMissing(tree, missing, describe)}, kitap upload --story ${tree.story} puts them there`);
   }
   if (problems.length) throw new Error(problems.join('\n'));
-  log(`the store holds every image and tile of ${trees.length} stor${trees.length === 1 ? 'y' : 'ies'} (${reader.count} request${reader.count === 1 ? '' : 's'})`);
+  log(`the store holds every object of ${trees.length} stor${trees.length === 1 ? 'y' : 'ies'} (${reader.count} request${reader.count === 1 ? '' : 's'})`);
 }

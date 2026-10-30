@@ -1,5 +1,0 @@
-{
-  "type": "Feature",
-  "properties": { "id": "island", "family": "settled", "name": { "en": "The settled island" }, "clip": ["Iceland"] },
-  "geometry": { "type": "Polygon", "coordinates": [[[-25, 63], [-13, 63], [-13, 67], [-25, 67], [-25, 63]]] }
-}

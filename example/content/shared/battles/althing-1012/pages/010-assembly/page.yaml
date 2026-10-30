@@ -1,7 +1,0 @@
-date: { en: "Summer 1012" }
-when: 1012
-title: { en: "The case against the burners" }
-bbox: [-21.4, 64.18, -20.85, 64.34]
-battle: true                      # opens the battle's card
-sources:
-  - "Njáls saga, ch. 145."

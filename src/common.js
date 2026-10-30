@@ -40,11 +40,11 @@ function setRoute(parts, push) {
 
 // The footer note on every page; the build fills in the repository URL from package.json
 const REPO = '/*__REPO__*/';
-const credit = ui => ui.generated_by.replace('{harita}', `<a href="${REPO}" target="_blank" rel="noopener">harita</a>`);
+const credit = ui => ui.generated_by.replace('{kitap}', `<a href="${REPO}" target="_blank" rel="noopener">kitap</a>`);
 
 const applyPalette = id => { document.documentElement.dataset.palette = id; savePref('palette', id); };
 
-// The story page layouts on wide screens: the map in the middle, or the chronology and the text together at one side.
+// The story page layouts on wide screens: the picture in the middle, or the contents and the text together at one side.
 // Every page offers the choice in its settings, and story pages apply it.
 const LAYOUTS = ['center', 'left', 'right'];
 // a small drawing of a layout: the map filled, the chronology and the text as outlines, in their order on the screen
