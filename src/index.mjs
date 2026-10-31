@@ -4,6 +4,7 @@ export { build, buildPages, checkStory as check, readStory, storyAssets, uiCatal
 export { dev } from './dev.mjs';
 export { i18n } from './translate.mjs';
 export { image, imageIndex, findImage, rehash } from './image.mjs';
+export { imageCandidates } from './candidates.mjs';
 export { upload } from './upload.mjs';
 export { deploy } from './deploy.mjs';
 export { resolve } from './routes.mjs';

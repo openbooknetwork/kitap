@@ -50,12 +50,18 @@ kitap check <story> [page id ...] [--places]
 kitap dev [--story <id>] [--out <dir>] [--port <n>]
 kitap i18n <lang> [--story <id>]
 kitap image <file or url> <name> --caption <text> [--credit <text>] [--source <url>] [--story <id>]
+kitap image-candidates <story> --queries <file> [--limit <n>] [--pages <id,id>] [--out <name>]
 kitap rehash | kitap upload [--story <id>] [--dry-run] | kitap deploy [--dry-run]
 ```
 
 An engine's own binary runs the same commands with its engine, `harita build` for instance, and adds its own.
 `--strict` fails on a missing translation or an object the store lacks; `--local-assets` shows the files on this
 machine before they are uploaded.
+
+`image-candidates` searches Wikimedia Commons for each page of a story and downloads what it finds to
+`<story>/.candidates/<page>/`, listed with author, license and source in `.candidates/index.yaml`. The queries file
+is keyed by story, then page: `{ queries: [search terms], articles: [Wikipedia titles or URLs], files: [Commons
+files] }`. A file the book holds already is listed with `held: <id>`. `kitap image <url>` adds a chosen one.
 
 ## An engine
 
