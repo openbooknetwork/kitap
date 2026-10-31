@@ -31,7 +31,8 @@
   },
   "files": [
     "bin",
-    "src"
+    "src",
+    "scripts"
   ],
   "publishConfig": {
     "access": "public"

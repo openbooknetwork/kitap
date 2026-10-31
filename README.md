@@ -97,6 +97,24 @@ and, as a module, dispatches `kitap-engine` once set. `host` carries the bundle 
 
 The test engine in `test/engines/plain.mjs` shows the least an engine needs.
 
+## Deploy
+
+A book serves from Cloudflare: the images and the engine's objects from an R2 bucket behind `assets.<zone>`, the
+pages from a second bucket through a Worker on the zone. `site.yaml` names them in `url`, `assets` and `pages`, and
+one script sets them up from a content project:
+
+```
+CF_TOKEN=<token> node node_modules/@openbooknetwork/kitap/scripts/cloudflare-book.mjs [--lock]
+```
+
+It adds the zone and prints its nameservers for the registrar, creates both buckets, attaches the assets domain,
+sets CORS, the cache rule, the SVG header rule and tiered cache, and with `--lock` the bucket lock on `images/`.
+Run it again once the zone is active. Then three tokens by hand: an R2 token on the assets bucket for `kitap
+upload`, one on the site bucket as the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` secrets of the deploy
+workflow, and a wrangler token with Workers Scripts Edit and Workers Routes Edit as `CLOUDFLARE_API_TOKEN` with
+the account id as `CLOUDFLARE_ACCOUNT_ID`. `scripts/cloudflare-redirect.mjs <old zone> <new zone>` sends a
+retired domain to the new one.
+
 ## Work on it
 
 ```
