@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Sets a book up on Cloudflare from its site.yaml: the zone of `url`, the assets bucket with its custom domain and
-// CORS, the site bucket, the cache rule and the SVG header rule on the assets host, and tiered cache. Every step
-// is skipped when it is already done, so the script can run again after the zone goes active.
+// CORS, the site bucket, the cache rule and the SVG header rule on the assets host, tiered cache, and https only.
+// Every step is skipped when it is already done, so the script can run again after the zone goes active.
 //
 //   CF_TOKEN=<token> node node_modules/@openbooknetwork/kitap/scripts/cloudflare-book.mjs [--lock] [--dry-run]
 //
@@ -35,6 +35,7 @@ await cors(assetsBucket);
 await managedDomainOff(assetsBucket);
 await customDomain(assetsBucket);
 await rules();
+await httpsOnly();
 if (values.lock) await lock(assetsBucket);
 console.log(zone.status === 'active' ? `${zoneName} is set up` : `${zoneName} is ${zone.status}: point the registrar at ${zone.name_servers.join(' and ')}, then run this again`);
 
@@ -97,6 +98,13 @@ async function rules() {
   }] });
   await call('PATCH', `/zones/${zone.id}/cache/tiered_cache_smart_topology_enable`, { value: 'on' });
   console.log(`zone ${zoneName}: cache rule, SVG header rule and tiered cache`);
+}
+
+// an http request answers with a redirect to https, and the TLS versions before 1.2 are refused
+async function httpsOnly() {
+  const settings = { ssl: 'strict', always_use_https: 'on', automatic_https_rewrites: 'on', min_tls_version: '1.2' };
+  for (const [id, value] of Object.entries(settings)) await call('PATCH', `/zones/${zone.id}/settings/${id}`, { value });
+  console.log(`zone ${zoneName}: https only, TLS 1.2 or later`);
 }
 
 // the store then refuses to delete or overwrite an image, whoever asks

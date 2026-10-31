@@ -46,19 +46,32 @@ const navEl = $('nav'), story = $('story'), legend = $('legend');
 // phones show either the viewport or the text; every step lands on the viewport, with a dot on Text until it is read
 // the text opens at the top the first time it is shown for a page; going back and forth on the same page keeps the place
 let textPage = -1;
+// the peek card shows until the reader opens the text or closes the card, and again on the next page
+let peekOn = true;
+function hidePeek(){ peekOn = false; $('peek').hidden = true; }
+// the engine's box at the top of the text, under the page's title, for its content that belongs with the text, such
+// as a battle's card; phones show it
+const extra = document.createElement('div'); extra.className = 'extra';
+// the engine's call to show something in the text: the text tab, scrolled to it after setTab's own scroll to the top
+function showText(target){
+  setTab('text');
+  requestAnimationFrame(() => story.scrollTo({ top: story.scrollTop + target.getBoundingClientRect().top - story.getBoundingClientRect().top, behavior: reduced ? 'auto' : 'smooth' }));
+}
 function setTab(tab){
   document.body.dataset.tab = tab;
   $('tab-map').setAttribute('aria-selected', tab === 'map'); $('tab-text').setAttribute('aria-selected', tab === 'text');
+  if (tab === 'text') hidePeek();
   if (tab === 'text' && textPage !== cur) { textPage = cur; story.scrollTop = 0; requestAnimationFrame(() => { story.scrollTop = 0; }); }
 }
 function renderChrome(){
   $('tab-map').textContent = T().tab_map; $('tab-text').textContent = T().tab_text;
   document.documentElement.lang = lang; document.documentElement.dir = T().dir === 'rtl' ? 'rtl' : 'ltr';
   $('title').textContent = L(B.title);
-  $('back').textContent = L(B.site.title);
+  $('back-label').textContent = L(B.site.title);
   $('back').href = siteLink(lang);
   $('hint').textContent = T().hint;
-  if (B.site.source) { $('src').href = B.site.source; $('src').innerHTML = `${ICONS['external-link']} ${esc(T().story_source)}`; $('src').hidden = false; }
+  // phones keep the source link in the settings panel instead of the header
+  if (B.site.source) for (const a of [$('src'), $('src-menu')]) { a.href = B.site.source; a.innerHTML = `${ICONS['external-link']} ${esc(T().story_source)}`; a.hidden = false; }
   $('made').innerHTML = credit(T());
   $('mapdata').innerHTML = `${ICONS.info}<span>${esc(T().map_data)}</span>`; $('mapdata').setAttribute('aria-label', T().map_data);
   $('mapdata').hidden = !B.credits.length;
@@ -70,9 +83,9 @@ function renderChrome(){
   $('lb-close').textContent = T().close;
   navEl.setAttribute('aria-label', T().chronology);
   fillSelect($('lang'), B.languages.map(l => ({ value: l, text: B.ui[l].name ?? l })), lang, T().language);
-  $('lang-icon').innerHTML = ICONS.languages; $('langpick').title = T().language; $('langpick').hidden = B.languages.length < 2;
+  $('lang-icon').innerHTML = ICONS.languages; $('lang-code').textContent = lang.toUpperCase(); $('langpick').title = T().language; $('langpick').hidden = B.languages.length < 2;
   fillSelect($('theme'), B.themes.map(t => ({ value: t.id, text: L(t.name) })), palette, T().theme);
-  $('settings-btn').innerHTML = `${ICONS.settings} ${esc(T().settings)}`;
+  $('settings-btn').innerHTML = `${ICONS.settings}<span>${esc(T().settings)}</span>`; $('settings-btn').setAttribute('aria-label', T().settings);
   $('settings').setAttribute('aria-label', T().settings);
   $('layout-label').textContent = T().layout; $('theme-label').textContent = T().theme;
   $('layouts').setAttribute('aria-label', T().layout);
@@ -122,12 +135,15 @@ function renderNav(reveal = true){
   };
   navEl.appendChild(build(B.tree, 0, ''));
 }
-// phones: the group path to the current page, and the page itself
+// phones: the group path to the current page, the page itself, and the page count on the Contents button
 const pathTo = (nodes, index) => { for (const n of nodes) { if (n.type === 'page' && n.index === index) return []; if (n.type === 'group') { const r = pathTo(n.children, index); if (r) return [n, ...r]; } } return null; };
 function renderWhere(p){
   $('crumbs').textContent = (pathTo(B.tree, cur) ?? []).map(g => L(g.title)).join(' › ');
-  $('here').innerHTML = p === OVERVIEW ? `<small>${esc(L(B.span))}</small>${esc(L(B.title))}` : `<small>${esc(L(p.date))}</small>${esc(L(p.title))}`;
-  $('contents').innerHTML = `${ICONS.list} ${esc(T().contents)}`;
+  // the header holds the story's title, so the overview's line names its span alone
+  $('here').innerHTML = p === OVERVIEW ? `<small>${esc(L(B.span))}</small>` : `<small>${esc(L(p.date))}</small>${esc(L(p.title))}`;
+  const count = cur < 0 ? '' : `${cur + 1} / ${PAGES.length}`;
+  $('contents').innerHTML = `${ICONS.list} ${esc(count || T().contents)}`;
+  $('contents').setAttribute('aria-label', count ? `${T().contents}, ${count}` : T().contents);
 }
 function openSheet(){ document.body.classList.add('sheet'); requestAnimationFrame(() => { const b = navEl.querySelector('.pg[aria-current="page"]'); if (b) b.scrollIntoView({ block: 'center' }); }); }
 function closeSheet(){ document.body.classList.remove('sheet'); }
@@ -141,7 +157,7 @@ function renderPeek(){
   $('peek-text').textContent = first ? first.textContent : '';
   $('peek-more').textContent = T().read_more;
   $('peek-close').setAttribute('aria-label', T().hide);
-  $('peek').hidden = !first;
+  $('peek').hidden = !first || !peekOn;
 }
 // credits this page's picture carries beyond the story's, behind an "Other sources" button beside the data credit
 function renderCredits(p){
@@ -161,6 +177,7 @@ function renderStory(p){
     story.innerHTML = `${L(p.date) ? `<div class="date">${esc(L(p.date))}</div>` : ''}<h2>${esc(L(p.title))}</h2>${p.html[lang]}${sources}`;
     document.title = `${L(p.title)} - ${L(B.title)}`;
   }
+  story.querySelector('h2').after(extra);
   renderCredits(p);
   story.scrollTop = 0;
   legend.hidden = true; $('legend-btn').hidden = true; // the engine fills the legend and shows the button for a page that has one
@@ -169,7 +186,7 @@ function renderStory(p){
   $('prev').disabled = cur < 0; $('next').disabled = cur === PAGES.length - 1;
 }
 // reveal centres the current page in the contents; a click in the contents itself leaves the scroll alone
-function go(i, fromRoute, reveal = true){ cur = i; closeImage(); setTab('map'); document.body.classList.remove('legend-open'); renderNav(); if (reveal) revealCurrent(); renderStory(here()); V.show?.(here(), false); if (!fromRoute) writeRoute(true); }
+function go(i, fromRoute, reveal = true){ cur = i; peekOn = true; closeImage(); setTab('map'); document.body.classList.remove('legend-open'); renderNav(); if (reveal) revealCurrent(); renderStory(here()); V.show?.(here(), false); if (!fromRoute) writeRoute(true); }
 function revealCurrent(){
   const b = navEl.querySelector('.pg[aria-current="page"]'); if (!b) return;
   const n = navEl.getBoundingClientRect(), r = b.getBoundingClientRect();
@@ -199,7 +216,7 @@ setTab('map');
 // the peek card: tap anywhere on it for the text; × hides it until the next page
 $('peek').onclick = () => setTab('text');
 $('peek').onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setTab('text'); } };
-$('peek-close').onclick = e => { e.stopPropagation(); $('peek').hidden = true; };
+$('peek-close').onclick = e => { e.stopPropagation(); hidePeek(); };
 $('legend-btn').onclick = () => document.body.classList.toggle('legend-open');
 // the data credit popup and the page's other sources popup share the credit bar, one open at a time
 const CREDIT_POPUPS = { mapdata: 'credits', othersrc: 'othercredits', ask: 'askmenu' };
@@ -254,11 +271,11 @@ new MutationObserver(() => V.theme?.()).observe(document.documentElement, { attr
 
 // ---------- the engine ----------
 // What the engine's client gets: the bundle, the elements it owns inside the stage, the current page and language,
-// and the shell's helpers. It returns the calls the shell makes as the reader moves: show(page, first), lang(l),
-// theme(), resize(), escape(), point(id, on) and highlight(kind, id).
+// and the shell's helpers, showText(el) among them. It returns the calls the shell makes as the reader moves:
+// show(page, first), lang(l), theme(), resize(), escape(), point(id, on) and highlight(kind, id).
 const host = {
-  B, engine: ENGINE, el: { map: $('map'), legend, story, label: $('hl-label'), view: $('view'), tools: document.querySelector('.maptools'), legendButton: $('legend-btn') },
-  here, isOverview: () => cur < 0, lang: () => lang, L, T, css, colorVar, esc, $, pref, savePref, reduced, canHover, phone, padding: fitPadding, openImage, closeImage, placeId,
+  B, engine: ENGINE, el: { map: $('map'), legend, story, label: $('hl-label'), view: $('view'), tools: document.querySelector('.maptools'), legendButton: $('legend-btn'), extra },
+  here, isOverview: () => cur < 0, lang: () => lang, L, T, css, colorVar, esc, $, pref, savePref, reduced, canHover, phone, padding: fitPadding, openImage, closeImage, placeId, showText,
 };
 let V = {};
 renderChrome(); renderNav(); renderStory(here());

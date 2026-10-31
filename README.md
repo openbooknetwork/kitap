@@ -41,6 +41,7 @@ beden:
 
 A text is Markdown. `@image <id>` on a line of its own shows an image folder, and `[word](@id)` links a word to
 something the engine shows on the page, a marker on a map or a part of a model.
+[writing/](writing/README.md) has the rules for the English of a story and for its translations, with a file per target language.
 
 ## Commands
 
@@ -100,6 +101,10 @@ The client script sets `window.KITAP_ENGINE = host => ({ show, lang, theme, resi
 and, as a module, dispatches `kitap-engine` once set. `host` carries the bundle `B`, the stage's elements under
 `el`, `here()`, `lang()`, `L`, `T`, `css`, `pref` and the shell's other helpers. The engine owns everything inside
 `el.map`, the legend and the view group; the shell owns the contents, the text, the tabs and the lightbox.
+`el.extra` is a box at the top of the text, under the page's title, that phones show: an engine puts there what
+belongs with the text, such as a battle's card. `showText(el)` switches a phone to the text and scrolls to `el`.
+The shell styles callouts an engine draws in `el.map`: a `.callouts` layer of `.co` name boxes over an SVG of lines,
+with `.callouts-on` on `el.map` hiding the markers' own names.
 
 The test engine in `test/engines/plain.mjs` shows the least an engine needs.
 
@@ -114,8 +119,8 @@ CF_TOKEN=<token> node node_modules/@openbooknetwork/kitap/scripts/cloudflare-boo
 ```
 
 It adds the zone and prints its nameservers for the registrar, creates both buckets, attaches the assets domain,
-sets CORS, the cache rule, the SVG header rule and tiered cache, and with `--lock` the bucket lock on `images/`.
-Run it again once the zone is active. Then three tokens by hand: an R2 token on the assets bucket for `kitap
+sets CORS, the cache rule, the SVG header rule, tiered cache and https only, and with `--lock` the bucket lock on
+`images/`. Run it again once the zone is active. Then three tokens by hand: an R2 token on the assets bucket for `kitap
 upload`, one on the site bucket as the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` secrets of the deploy
 workflow, and a wrangler token with Workers Scripts Edit and Workers Routes Edit as `CLOUDFLARE_API_TOKEN` with
 the account id as `CLOUDFLARE_ACCOUNT_ID`. `scripts/cloudflare-redirect.mjs <old zone> <new zone>` sends a

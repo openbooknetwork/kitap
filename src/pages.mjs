@@ -91,7 +91,7 @@ export function storyFiles({ shell, bundle: B, texts, firstImages, links, coverI
     const L = f => pick(f, lang, def);
     let html = fill(shell, '<html lang="en">', `<html lang="${lang}" dir="${B.ui[lang].dir}">`);
     html = fill(html, '<!--__HEAD__-->', headHtml);
-    html = fill(html, '<a class="back" id="back" href="../"></a>', `<a class="back" id="back" href="../${homeLang(lang)}/">${esc(L(B.site.title))}</a>`);
+    html = fill(html, '<a class="back" id="back" href="../"><span id="back-label"></span></a>', `<a class="back" id="back" href="../${homeLang(lang)}/"><span id="back-label">${esc(L(B.site.title))}</span></a>`);
     html = fill(html, '<h1 id="title"></h1>', `<h1 id="title">${esc(L(B.title))}</h1>`);
     html = fill(html, '<nav class="pages" id="nav"></nav>', `<nav class="pages" id="nav">${nav(lang, cur)}</nav>`);
     html = fill(html, '<div class="text" id="story"></div>', `<div class="text" id="story">${text}</div>`);

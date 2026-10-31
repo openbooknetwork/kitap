@@ -33,6 +33,7 @@ header .prefs{position:relative}
 .langpick select{background:var(--panel);color:inherit;border:0;border-radius:4px;font:inherit;padding:.357rem .571rem;cursor:pointer}
 .langpick:focus-within{outline:2px solid var(--accent)}
 .langpick select:focus{outline:none}
+.langpick .code,.settings .src-link{display:none}
 /* settings: the same panel as on a story page, the layout and the theme, under its button */
 .settings{position:absolute;top:calc(100% + .429rem);inset-inline-end:0;z-index:8;width:min(24rem,calc(100vw - 2.286rem));display:grid;gap:.857rem;
   background:var(--panel);border:1px solid var(--rule);border-radius:6px;padding:.857rem;box-shadow:0 4px 16px rgba(0,0,0,.25)}
@@ -44,7 +45,23 @@ header .prefs{position:relative}
 .layouts button svg{width:100%;height:auto;max-width:4.6rem}
 .layouts button[aria-checked="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
 .layouts button:focus-visible{outline:2px solid var(--accent)}
-@media (max-width:900px){ .settings .layout-group{display:none} } /* a phone has one layout */
+@media (max-width:900px){
+  .settings .layout-group{display:none} /* a phone has one layout */
+  /* the header is one row: the title, the language as its code, settings as an icon; Contribute moves into the settings */
+  header{flex-wrap:nowrap;gap:.571rem}
+  header h1{flex:1;min-width:0;font-size:1.429rem}
+  header .controls{gap:.429rem}
+  header a.contribute{display:none}
+  /* the native select lies invisible over the code, so a tap opens the phone's own list of full names; 16px stops iOS zooming */
+  .langpick{position:relative;min-height:max(40px,2.857rem);padding-inline:.571rem;gap:.286rem}
+  .langpick .code{display:inline;font-weight:600}
+  .langpick::after{content:"";border:4px solid transparent;border-top:5px solid var(--ink-2);border-bottom:0}
+  .langpick select{position:absolute;inset:0;width:100%;opacity:0;font-size:16px}
+  #settings-btn{min-width:max(44px,3.143rem);min-height:max(40px,2.857rem);justify-content:center;padding:0}
+  #settings-btn svg{width:1.143rem;height:1.143rem}
+  #settings-btn span{display:none}
+  .settings .src-link{display:block;color:var(--ink-2);font-size:.929rem}
+}
 select#theme{width:100%;min-height:max(40px,2.857rem);background:var(--paper);color:var(--ink);border:1px solid var(--rule);border-radius:4px;padding:0 .571rem;font:inherit;cursor:pointer}
 select#theme:focus-visible{outline:2px solid var(--accent)}
 .intro{max-width:62ch;color:var(--ink-2);margin:0}
@@ -94,12 +111,13 @@ select#theme:focus-visible{outline:2px solid var(--accent)}
   <header>
     <h1 id="title"></h1>
     <div class="controls"><a class="contribute" id="contribute" target="_blank" rel="noopener" hidden></a>
-      <label class="langpick" id="langpick"><span id="lang-icon" aria-hidden="true"></span><select id="lang"></select></label>
+      <label class="langpick" id="langpick"><span id="lang-icon" aria-hidden="true"></span><span class="code" id="lang-code" aria-hidden="true"></span><select id="lang"></select></label>
       <div class="prefs">
         <button type="button" id="settings-btn" aria-expanded="false" aria-controls="settings"></button>
         <div class="settings" id="settings" hidden>
           <div class="group layout-group"><span id="layout-label"></span><div class="layouts" id="layouts" role="radiogroup"></div></div>
           <label class="group"><span id="theme-label"></span><select id="theme"></select></label>
+          <a class="src-link" id="contribute-menu" target="_blank" rel="noopener" hidden></a>
         </div>
       </div>
     </div>
@@ -130,11 +148,12 @@ function render(){
   document.title = L(S.title);
   $('title').textContent = L(S.title);
   $('intro').textContent = L(S.intro);
-  if (S.repository) { $('contribute').href = S.repository; $('contribute').textContent = S.ui[lang].contribute; $('contribute').hidden = false; }
+  // phones keep the Contribute link in the settings panel instead of the header
+  if (S.repository) for (const a of [$('contribute'), $('contribute-menu')]) { a.href = S.repository; a.textContent = S.ui[lang].contribute; a.hidden = false; }
   fillSelect($('lang'), S.languages.map(l => ({ value: l, text: S.ui[l].name ?? l })), lang, S.ui[lang].language);
-  $('lang-icon').innerHTML = S.icons.languages; $('langpick').title = S.ui[lang].language; $('langpick').hidden = S.languages.length < 2;
+  $('lang-icon').innerHTML = S.icons.languages; $('lang-code').textContent = lang.toUpperCase(); $('langpick').title = S.ui[lang].language; $('langpick').hidden = S.languages.length < 2;
   fillSelect($('theme'), S.themes.map(t => ({ value: t.id, text: pick(t.name, lang, S.defaultLanguage, t.id) })), palette, S.ui[lang].theme);
-  $('settings-btn').innerHTML = `${S.icons.settings} ${esc(S.ui[lang].settings)}`;
+  $('settings-btn').innerHTML = `${S.icons.settings}<span>${esc(S.ui[lang].settings)}</span>`; $('settings-btn').setAttribute('aria-label', S.ui[lang].settings);
   $('settings').setAttribute('aria-label', S.ui[lang].settings);
   $('theme-label').textContent = S.ui[lang].theme;
   $('layout-label').textContent = S.ui[lang].layout; $('layouts').setAttribute('aria-label', S.ui[lang].layout);
