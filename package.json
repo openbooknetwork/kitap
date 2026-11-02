@@ -1,6 +1,6 @@
 {
   "name": "@openbooknetwork/kitap",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "The book under the Open Book Network sites: stories of pages with a text beside a picture an engine draws, built to a static site in every language",
   "keywords": [
     "static-site",
