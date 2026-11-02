@@ -21,9 +21,9 @@ adds its own rules, such as paragraph length and the links a text makes.
 5. Keep the small words that show structure: `that` after a verb of saying and before a relative clause, and the
    articles. "the archive they burned" becomes "the archive that they burned."
 6. Spell out a stack of nouns. "port tax revenue records" becomes "records of the revenue from port taxes."
-7. Name the year when the text moves in time and the page has not named it yet. A reader can open any page first.
-   "That spring the army marched east" becomes "In spring 1921 the army marched east." Dates read day, month,
-   year: 26 August 1921.
+7. Name the year when the text moves in time and the page has not named it yet. A reader can open any page first. "That
+   spring the army marched east" becomes "In spring 1921 the army marched east." Dates read day, month, year: 26 August
+   1921. A year before the Common Era takes BC after it: 216 BC. An approximate year takes about: about 1450.
 8. Say plainly what an idiom, a pun or a double negative means. "not uncommon" becomes "common", "turned a blind
    eye" becomes "ignored", "the tide turned" becomes what changed.
 9. A person, place, state or structure has one name at a time through a story: the name its marker, battle card or
@@ -45,8 +45,9 @@ phrase or one short sentence.
 
 1. Translate a paragraph at a time. Split, join and reorder its sentences as the language reads best, and keep every
    fact, date, number, name and hedge such as "about" or "probably".
-2. Keep the markup: each `@image <id>` line, each link target `(@id)` and the paragraph breaks. A link's text is
-   the word as the translation writes it, with any suffix.
+2. Keep the markup: each `@image <id>` line, each link target `(@id)` and the paragraph breaks. A link covers the name
+   with the endings and suffixes the language attaches to it. An article, a preposition or a particle written as a
+   separate word stays outside the link, unless it is part of the name.
 3. A name takes the form the language's own maps and schoolbooks use: Seddülbahir in Turkish for Cape Helles, Салоники
    in Russian for Thessaloniki. An event takes the name the language's own histories give it. A name with no such form
    is translated where it describes the place, as Lone Pine and Baby 700 do, and transliterated by the language's usual
@@ -55,8 +56,14 @@ phrase or one short sentence.
    forms of a bracketed name, the bracket goes: "Thessaloniki (then Salonica)" is Selanik in Turkish. The terms of a
    subject, such as a battle's or an organ's, stay the same through a story.
 4. The tense follows the source. A story told in the present stays in the present.
-5. Numbers, dates, times of day and units follow the language's own conventions. A number stays on one line with
-   its unit or its suffix: join them with a no break space (U+00A0) or a no break hyphen (U+2011).
+5. Numbers, dates, times of day and units follow the language's own conventions. A number stays on one line with its
+   unit or its suffix: a space between them is a no break space (U+00A0, or the narrow U+202F where the language's file
+   says so), and a hyphen between them is a no break hyphen (U+2011).
 6. Punctuation follows the language's own rules, its dashes, semicolons and name separators included.
 
-A file per language in this folder, such as [tr.md](tr.md), holds that language's conventions.
+7. Wording about a disputed event, border or territory stays as neutral as the source. Where the language's official
+   or partisan term takes a side, the term that names both sides replaces it.
+
+A file per language in this folder, such as [tr.md](tr.md), holds that language's conventions: how the text and the
+interface address the reader, which past tense tells history, and how it writes years before the Common Era and a
+ruler's number.
