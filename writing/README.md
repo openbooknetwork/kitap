@@ -35,6 +35,8 @@ and the links a text makes.
 11. A person or a state takes the name of the time: Mustafa Kemal until the surname law of 1934 and Atatürk after
     it, the Republic of Turkey in 1923 and Türkiye today. The later name may follow in brackets: İsmet Pasha (later
     İnönü). A story's title and summary name their subject as readers know it today.
+12. Measures are metric. A figure taken from miles, yards or feet keeps the precision of the original: under
+    two miles becomes under 3 km, about 800 yards becomes about 700 m.
 
 Long sentences that continue after the main clause read and translate well. So do the passive, when the actor is
 unknown or does not matter, metaphors that make sense word for word, and synonyms for ordinary nouns.
