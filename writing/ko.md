@@ -2,8 +2,8 @@
 
 These add to the rules for translating in [README.md](README.md).
 
-- Write the standard language of South Korea. Prose ends in 합니다체, as Korean primary schoolbooks do: 무스타파는
-  1881년 테살로니키에서 태어납니다. A title, a label or a marker note ends in a noun: 무스타파 케말 상륙, 1919년
+- Write the standard language of South Korea. Prose ends in 한다체, as Korean secondary schoolbooks do: 무스타파는
+  1881년 테살로니키에서 태어난다. A title, a label or a marker note ends in a noun: 무스타파 케말 상륙, 1919년
   5월 19일. In the interface a button is a noun (닫기, 다음), a message ends in 합니다 and an instruction in -세요.
 - A name takes the form Korean schoolbooks use, and otherwise the form of the 외래어 표기법 and the 국립국어원's list
   of loanword spellings: 이스탄불, 갈리폴리, 앙카라. A Turkish name follows its Turkish sound, written without tense
@@ -19,8 +19,8 @@ These add to the rules for translating in [README.md](README.md).
   last sound of the name: [앙카라](@ankara)에, [이스탄불](@istanbul)은, [테살로니키](@salonica)는.
 - Leave out 그, 그녀, 당신 and 우리 where the sentence reads clearly without them, and repeat the name where it does
   not. A plural takes 들 only where the sense needs it: 많은 도시.
-- Write the active voice where English uses the passive: 그리스군이 이즈미르를 점령합니다. "Have" becomes 있다 or a
-  verb of its own: 권한이 있습니다.
+- Write the active voice where English uses the passive: 그리스군이 이즈미르를 점령한다. "Have" becomes 있다 or a
+  verb of its own: 권한이 있다.
 - A count follows its noun, with the counter of that noun: 군함 3척, 대포 40문, 병사 2만 명.
 - A unit after digits joins them: 1921년 8월 26일, 10개, 5km. A unit after 만 or 억 follows a no break space:
   25만 명. A round number of ten thousand or more takes 만 or 억: 25만. Others group thousands with a comma: 315,500.

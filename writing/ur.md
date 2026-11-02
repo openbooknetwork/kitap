@@ -2,8 +2,8 @@
 
 These add to the rules for translating in [README.md](README.md).
 
-- Write the standard Urdu of Pakistan's schoolbooks, with the everyday word a child knows: فوج، جنگ، معاہدہ، دل.
-  Address the reader as آپ: دیکھیں، پڑھیں.
+- Write the standard Urdu of Pakistan's schoolbooks, with the common word over a rarer literary one:
+  فوج، جنگ، معاہدہ، دل. Address the reader as آپ: دیکھیں، پڑھیں.
 - Letters are Urdu: ک (U+06A9), ی (U+06CC), ے (U+06D2), ہ (U+06C1), ھ (U+06BE), ں (U+06BA). ھ marks an aspirate:
   بھی، پھر، کھیت. ہ is every other h: ہے، شہر. A word ending in e or ai takes ے: ہے، سے. A nasal ending takes ں: میں.
 - A sentence ends with the Urdu full stop ۔ (U+06D4). The comma is ، the semicolon ؛ the question mark ؟. Quotes open

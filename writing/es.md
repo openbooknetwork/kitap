@@ -4,8 +4,8 @@ These add to the rules for translating in [README.md](README.md).
 
 - Write the neutral Spanish of Latin America, in words that readers in Spain share: tomar over coger, ustedes with
   its verbs for a plural "you". A man as the direct object takes lo: Los británicos lo capturaron en 1916.
-- The text and the interface address the reader with tú, as Latin American learning sites for children do:
-  Elige una batalla. A button names its action in the infinitive: Comenzar, Ver el mapa.
+- The text and the interface address the reader with tú: Elige una batalla. A button names its
+  action in the infinitive: Comenzar, Ver el mapa.
 - A name takes the form of Spanish histories and of the RAE's lists of place names: Estambul, Galípoli, los
   Dardanelos, Tesalónica (entonces Salónica), el Tratado de Lausana. A ruler takes the Spanish name: Solimán el
   Magnífico, Pedro el Grande. Pasha is Pachá after the name: Enver Pachá.

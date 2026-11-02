@@ -3,8 +3,7 @@
 These add to the rules for translating in [README.md](README.md).
 
 - Spelling follows EYD, fifth edition (2022), and KBBI: Prancis, praktik, risiko, apotek.
-- The interface addresses the reader as kamu, as the Ministry of Education's student books do. An instruction leaves
-  the pronoun out: Pilih cerita.
+- The interface addresses the reader as Anda, with a capital. An instruction leaves the pronoun out: Pilih cerita.
 - A name takes the form Indonesian schoolbooks use: Tiongkok, Belanda, Wina, Den Haag, Kekaisaran Romawi. A name from
   Islamic history takes its Indonesian form: Salahuddin Al-Ayyubi, Harun ar-Rasyid, Kesultanan Utsmaniyah.
 - A nation, a people or a language starts with a capital, and the word before it stays lower case: bangsa Turki,

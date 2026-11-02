@@ -2,7 +2,7 @@
 
 These add to the rules for translating in [README.md](README.md).
 
-- The interface addresses the reader as bạn, which suits a child and an adult alike: Chọn một câu chuyện.
+- The interface addresses the reader as bạn: Chọn một câu chuyện.
 - Spelling follows the Ministry of Education's rules for schoolbooks. A common word takes i after a consonant:
   thế kỉ, lí do, kĩ thuật. The tone mark goes on the main vowel: hoà, thuỷ, khoẻ. A name keeps its own spelling:
   Lý Thường Kiệt.

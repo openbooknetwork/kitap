@@ -4,8 +4,7 @@ These add to the rules for translating in [README.md](README.md).
 
 - Write the standard German of Germany under the rules of the Rat für deutsche Rechtschreibung: Straße, Januar.
   A noun for a group of people takes the masculine plural or both forms: die Soldaten, Bürgerinnen und Bürger.
-- The text and the interface address the reader as du, in lower case, as German learning sites for children do:
-  Blättere mit den Pfeiltasten.
+- The text and the interface address the reader as Sie: Blättern Sie mit den Pfeiltasten.
 - A name takes the form German schoolbooks and the Duden use: Istanbul, Izmir, Dardanellen, Moskau, Peter der
   Große. A name in Latin letters keeps its letters and marks: Çanakkale, Eskişehir, İnönü. A Cyrillic name follows
   the Duden transcription: Chruschtschow, Jelzin.

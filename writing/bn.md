@@ -4,7 +4,7 @@ These add to the rules for translating in [README.md](README.md).
 
 - Write the standard Bengali of Bangladesh (প্রমিত বাংলা) in the Bangla Academy's spelling, with the vocabulary of
   Bangladesh's schoolbooks: লাখ, পানি. Write চলিত ভাষা throughout, with its verb and pronoun forms: করেছিল, তারা.
-  Address the reader as তুমি: দেখো, পড়ো.
+  Address the reader as আপনি: দেখুন, পড়ুন.
 - A word that is not a Sanskrit loan (তৎসম) takes only ি and ু: জানুয়ারি, সরকারি, ইরানি, তুর্কি. A foreign word takes
   ন and স in place of ণ and ষ: গভর্নর, কর্নেল, স্টেশন, খ্রিস্টাব্দ.
 - A case ending joins the name, and the link covers the whole word: [আঙ্কারায়](@ankara), [ইজমিরের](@izmir). A

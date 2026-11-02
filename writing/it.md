@@ -2,7 +2,7 @@
 
 These add to the rules for translating in [README.md](README.md).
 
-- The text and the interface address the reader with tu, as Italian sites for children do: Scegli una battaglia.
+- The text and the interface address the reader with tu: Scegli una battaglia.
   A button names its action in the imperative: Inizia, Mostra la mappa.
 - The English simple past becomes the passato remoto, with the imperfetto for what was going on, as Italian
   history books tell it: Nel 1915 gli Alleati sbarcarono a Gallipoli.

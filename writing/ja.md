@@ -2,7 +2,7 @@
 
 These add to the rules for translating in [README.md](README.md).
 
-- Prose uses です・ます, as primary schoolbooks and public explanations do: ムスタファは1881年にテッサロニキで
+- Prose uses です・ます, as public explanations and museum panels do: ムスタファは1881年にテッサロニキで
   生まれます。A title, a label or a marker note ends in a noun: ムスタファ・ケマルの上陸、1919年5月19日. In the
   interface a button is a noun or a plain verb (次へ, 閉じる), and a message uses です・ます.
 - A name takes the form Japanese schoolbooks and school atlases use: オスマン帝国, イスタンブール, アタテュルク,

@@ -2,8 +2,9 @@
 
 The English of a story is the source of every translation. These rules keep its sentences to one reading and its
 names to the forms that maps and schoolbooks in every language use, so a reader of any translation meets the story
-as if it were written in their language. The English still reads as ordinary prose. A content project's `AGENTS.md`
-adds its own rules, such as paragraph length and the links a text makes.
+as if it were written in their language. The stories are written for readers of secondary school age and older. The
+English still reads as ordinary prose. A content project's `AGENTS.md` adds its own rules, such as paragraph length
+and the links a text makes.
 
 ## English
 

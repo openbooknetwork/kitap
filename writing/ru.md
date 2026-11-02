@@ -9,7 +9,7 @@ These add to the rules for translating in [README.md](README.md).
 - A Turkish name with no Russian form follows the practical transcription: c is дж, ç is ч, ş is ш, ı is ы, and ğ
   drops out. After a consonant ö is ё and ü is ю. At the start of a word e is э: Джемаль-паша, Чанаккале,
   Кёпрюлю, Эрдоган, Эскишехир.
-- Write ё wherever it belongs, as schoolbooks for children do: её, вёл, Кёпрюлю.
+- Write ё wherever it belongs, as schoolbooks do: её, вёл, Кёпрюлю.
 - Quotes are «ёлочки», with „лапки“ inside them. A dash stands between subject and predicate where grammar puts
   one: Салоники — крупнейший порт.
 - The name of an event or a state capitalizes its first word and the proper names in it: Первая мировая война,

@@ -2,8 +2,8 @@
 
 These add to the rules for translating in [README.md](README.md).
 
-- Write the everyday standard Hindi of schoolbooks. Prefer the word a child meets in them to a rarer Sanskrit or
-  Persian synonym: सेना to वाहिनी or लश्कर. Address the reader as आप: देखें, पढ़ें.
+- Write the everyday standard Hindi of schoolbooks. Prefer their common word to a rarer Sanskrit or Persian
+  synonym: सेना to वाहिनी or लश्कर. Address the reader as आप: देखें, पढ़ें.
 - Spelling follows the Central Hindi Directorate's standard: an anusvara before a consonant of its class (हिंदी, संबंध,
   अंत), a chandrabindu where no vowel sign stands above the line (आँख, पाँच, हँसना) and an anusvara where one does
   (में, नहीं), verb forms with ए and ई (गए, गई, लिए), and the adjective with य (नया, नयी, नये).

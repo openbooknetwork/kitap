@@ -5,9 +5,8 @@ These add to the rules for translating in [README.md](README.md).
 - Write Brazilian Portuguese in the spelling of the 1990 Orthographic Agreement, with the ABL's VOLP as the
   reference. Words and accents are Brazilian: fato, registro, trem, fenômeno, Salônica, esôfago, abdômen, fêmur.
   An action in progress takes the gerund: os soldados estavam cavando trincheiras.
-- The text and the interface address the reader as você, with the verb in the third person, as Brazilian
-  learning sites for children do: Escolha uma batalha, Clique no mapa. A button names its action in the
-  infinitive: Começar, Ver o mapa.
+- The text and the interface address the reader as você, with the verb in the third person: Escolha uma batalha,
+  Clique no mapa. A button names its action in the infinitive: Começar, Ver o mapa.
 - The possessive seu belongs to the reader. Another person's possession takes dele or dela: o exército dele.
   A part of the body takes the article in place of the English possessive: Quando você corre, o coração bate mais
   rápido.

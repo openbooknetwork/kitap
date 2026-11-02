@@ -2,10 +2,10 @@
 
 These add to the rules for translating in [README.md](README.md).
 
-- Write the French of France. The text and the interface address the reader with tu, as French sites for
-  children do: Choisis une bataille. A button names its action in the infinitive: Commencer, Voir la carte.
-- The English past becomes the passé composé, with the imparfait for what was going on, as French history is told
-  to children: En 1915, les Alliés ont débarqué à Gallipoli.
+- Write the French of France. The text and the interface address the reader with vous: Choisissez une bataille. A button
+  names its action in the infinitive: Commencer, Voir la carte.
+- The English past becomes the passé simple, with the imparfait for what was going on, as French history books
+  and encyclopaedias tell it: En 1915, les Alliés débarquèrent à Gallipoli.
 - A narrow no break space (U+202F) goes before ; ! ? and a no break space (U+00A0) goes before : and inside « ».
   Quotes are « », with “ ” inside them: « Le colonel écrit : “Tenez !” »
 - Numbers group thousands with a narrow no break space and take a decimal comma: 250 000, 1,5 km. Years stay
@@ -27,7 +27,7 @@ These add to the rules for translating in [README.md](README.md).
   (alors Salonique). A ruler takes the French name: Soliman le Magnifique, Pierre le Grand. Pasha is Pacha after
   the name: Enver Pacha.
 - An English dash around an aside becomes commas or parentheses.
-- A part of the body takes the article in place of the English possessive: Quand tu cours, le cœur bat plus vite.
+- A part of the body takes the article in place of the English possessive: Quand vous courez, le cœur bat plus vite.
   Anatomy takes the schoolbook word: oreillette over atrium, omoplate over scapula, rotule over patella.
 
 ## Sources
