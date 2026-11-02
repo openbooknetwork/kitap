@@ -12,8 +12,10 @@ const preferredLang = (langs, fallback) => {
   return fallback;
 };
 
-// A translatable field for the current language, falling back to the default language.
-const pick = (field, lang, defaultLang, fallback = '') => field?.[lang] ?? field?.[defaultLang] ?? fallback;
+// A translatable field for the current language, falling back to the default language. A plain string, such as an
+// engine's map data credit, reads the same in every language.
+const pick = (field, lang, defaultLang, fallback = '') =>
+  typeof field === 'string' ? field : field?.[lang] ?? field?.[defaultLang] ?? fallback;
 
 function fillSelect(sel, items, current, label) {
   sel.setAttribute('aria-label', label); sel.innerHTML = '';
