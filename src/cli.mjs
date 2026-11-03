@@ -3,7 +3,7 @@
 import { parseArgs } from 'util';
 import { build, check, dev, i18n, image, imageCandidates, rehash, upload, deploy } from './index.mjs';
 
-export const USAGE = (name = 'kitap', extra = '') => `usage: ${name} build [--strict] [--local-assets] [--only <story> ...] [--story <id>] [--out <dir>] | ${name} check <story> [page id ...] [--places] | ${name} dev [--story <id>] [--out <dir>] [--port <n>] | ${name} i18n <lang> [--story id] [--stale | --stamp] | ${name} image <file or url> <name> --caption <text> [--credit <text>] [--source <url>] [--story <id>] | ${name} image-candidates <story> --queries <file> [--limit <n>] [--pages <id,id>] [--out <name>] | ${name} rehash | ${name} upload [--story <id>] [--dry-run] | ${name} deploy [--dry-run]${extra}`;
+export const USAGE = (name = 'kitap', extra = '') => `usage: ${name} build [--strict] [--local-assets] [--only <story> ...] [--story <id>] [--out <dir>] | ${name} check <story> [page id ...] [--places] | ${name} dev [--story <id>] [--out <dir>] [--port <n>] | ${name} i18n [<lang>] [--story id] [--stale | --stamp] | ${name} image <file or url> <name> --caption <text> [--credit <text>] [--source <url>] [--story <id>] | ${name} image-candidates <story> --queries <file> [--limit <n>] [--pages <id,id>] [--out <name>] | ${name} rehash | ${name} upload [--story <id>] [--dry-run] | ${name} deploy [--dry-run]${extra}`;
 
 // argv are the arguments after the command name. engine is the engine module to build with, else site.yaml names it.
 // own(cmd, positionals, options) runs an engine's own command and returns true when it took it. options adds flags.
@@ -27,7 +27,7 @@ export async function run(argv, { name = 'kitap', engine = null, enginePath = nu
       console.log(problems.length ? `${problems.length} problem${problems.length === 1 ? '' : 's'}` : 'ok');
       process.exitCode = problems.length ? 1 : 0;
     }
-    else if (cmd === 'i18n' && lang) i18n({ lang, story: opt.story, engine: e, stale: opt.stale, stamp: opt.stamp });
+    else if (cmd === 'i18n' && (lang || opt.stale || opt.stamp)) i18n({ lang, story: opt.story, engine: e, stale: opt.stale, stamp: opt.stamp });
     else if (cmd === 'image' && lang) await image({ file: lang, name: rest[0], caption: opt.caption, credit: opt.credit, source: opt.source, story: opt.story });
     else if (cmd === 'image-candidates' && lang) await imageCandidates({ story: lang, queries: opt.queries, limit: Number(opt.limit) || 6, pages: opt.pages?.split(',') ?? null, out: opt.out ?? '' });
     else if (cmd === 'rehash') rehash();

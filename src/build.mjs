@@ -640,7 +640,7 @@ export function buildPages({ root = process.cwd(), log = console.log, strict = f
   }
   const folders = Object.fromEntries(Object.entries(merged).map(([dir, f]) => [dir, { ...f, langs: [...f.langs], entries: [...f.entries.values()] }]));
   return { dist: p.dist, themes: site.themes, engine: e, stories: cards.map(({ i18n, objects, folderI18n, pageTexts, localKeys, redirects, tree, coverOg, local, ...card }) => card),
-    i18n: { stories: Object.fromEntries(built.map(c => [c.id, { dir: c.dir, entries: c.i18n, langs: c.languages, defaultLang: c.defaultLanguage, pages: c.pageTexts, folders: Object.keys(c.folderI18n) }])), site: p.siteEntries, siteLang: site.defaultLang, folders },
+    i18n: { stories: Object.fromEntries(built.map(c => [c.id, { dir: c.dir, entries: c.i18n, langs: c.languages, defaultLang: c.defaultLanguage, pages: c.pageTexts, folders: Object.keys(c.folderI18n) }])), site: p.siteEntries, siteLang: site.defaultLang, siteLangs: site.langs, folders },
     objects: built.map(c => ({ story: c.id, dir: c.dir, ...c.objects })), trees: built.map(c => ({ ...c.tree, dir: c.dir })), assets: site.assets ?? null };
 }
 

@@ -125,4 +125,13 @@ test('i18n --stale lists what changed since --stamp, by block and by key', async
   i18n({ ...o, stale: true });
   assert.equal(lines.at(-1), 'first-story tr: up to date');
   await assert.rejects(async () => i18n({ ...o, stale: true, stamp: true }), /--stale or --stamp, one of them/);
+  // without a language, one build covers every language of the story
+  edit(root, page + 'en.md', 'A new one.', 'A newer one.');
+  i18n({ ...o, lang: undefined, stale: true });
+  assert.equal(lines.at(-1), 'first-story tr: 1 block');
+  fs.writeFileSync(path.join(root, page, 'tr.md'), ['tr A second page.', 'tr It has four blocks now.', 'tr And the last.', 'tr A newer one.'].join('\n\n') + '\n');
+  i18n({ ...o, lang: undefined, stamp: true });
+  i18n({ ...o, lang: undefined, stale: true });
+  assert.equal(lines.at(-1), 'first-story tr: up to date');
+  await assert.rejects(async () => i18n({ ...o, lang: undefined }), /usage: kitap i18n/);
 });

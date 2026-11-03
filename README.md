@@ -49,7 +49,7 @@ something the engine shows on the page, a marker on a map or a part of a model.
 kitap build [--strict] [--local-assets] [--only <story>] [--story <id>] [--out <dir>]
 kitap check <story> [page id ...] [--places]
 kitap dev [--story <id>] [--out <dir>] [--port <n>]
-kitap i18n <lang> [--story <id>] [--stale | --stamp]
+kitap i18n [<lang>] [--story <id>] [--stale | --stamp]
 kitap image <file or url> <name> --caption <text> [--credit <text>] [--source <url>] [--story <id>]
 kitap image-candidates <story> --queries <file> [--limit <n>] [--pages <id,id>] [--out <name>]
 kitap rehash | kitap upload [--story <id>] [--dry-run] | kitap deploy [--dry-run]
@@ -65,7 +65,7 @@ uploaded.
 stamp, each with the new source and the current translation, and what has no translation yet. A translator sent to
 update a story reads that list in place of the story. `--stamp` records the hash of the source behind every
 translated paragraph and string in `i18n/stamps/<lang>.yaml` of the story, of each folder it uses and of the site.
-Run it after a review.
+Run it after a review. Without a language, either flag covers every language from one build.
 
 `image-candidates` searches Wikimedia Commons for each page of a story and downloads what it finds to
 `<story>/.candidates/<page>/`, listed with author, license and source in `.candidates/index.yaml`. The queries file
