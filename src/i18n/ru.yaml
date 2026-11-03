@@ -7,7 +7,7 @@ sources: "Источники"
 chronology: "Содержание"
 language: "Язык"
 hint: "Листайте стрелками."
-pages: "страниц"
+pages: { one: "страница", few: "страницы", many: "страниц", other: "страницы" }
 open: "Открыть"
 theme: "Тема"
 expand_all: "Развернуть всё"

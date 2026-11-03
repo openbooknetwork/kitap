@@ -83,13 +83,15 @@ export function uiCatalogue(root, lang, themes, engine = null) {
   const inlineNames = Object.fromEntries(Object.entries(themes).filter(([, t]) => typeof t.name === 'object' && t.name?.[lang]).map(([id, t]) => [`themes.${id}`, t.name[lang]]));
   const own = shipped(engine, lang);
   const have = { ...inlineNames, ...own, ...uiOwn(root, lang) };
-  return { entries, existing: have, missing: entries.filter(e => !have[e.key]).map(e => e.key), shipped: Object.keys(own).length > 0 };
+  return { entries, existing: have, missing: entries.filter(e => !have[e.key] && !Object.keys(have).some(k => k.startsWith(e.key + '.'))).map(e => e.key), shipped: Object.keys(own).length > 0 };
 }
 // dir is the language's writing direction, from ICU; Node before 23 has textInfo, later ones getTextInfo()
 const textDir = l => { const loc = new Intl.Locale(l); return (loc.getTextInfo?.() ?? loc.textInfo).direction; };
+// digits is the numbering system of a language whose writing rules ask for digits other than 0-9
+const DIGITS = { fa: 'arabext', bn: 'beng' };
 function uiFor(langs, root, engine) {
   // a missing key falls back to English alone
-  return Object.fromEntries(langs.map(l => [l, { ...unflatten({ ...shipped(engine, 'en'), ...shipped(engine, l), ...uiOwn(root, l) }), dir: textDir(l) }]));
+  return Object.fromEntries(langs.map(l => [l, { ...unflatten({ ...shipped(engine, 'en'), ...shipped(engine, l), ...uiOwn(root, l) }), dir: textDir(l), digits: DIGITS[l.split('-')[0]] ?? 'latn' }]));
 }
 const themeList = (themes, ui, langs) => Object.entries(themes).map(([id, t]) => ({ id, name: Object.fromEntries(langs.map(l => [l, ui[l].themes?.[id] ?? (typeof t.name === 'string' ? t.name : t.name?.[l] ?? t.name?.en) ?? id])) }));
 
@@ -130,7 +132,8 @@ function themeCss(themes, defaultId) {
 
 // whether a text names a place by its label, or by the label without a part in brackets, at the start of a word, so a
 // Turkish suffix such as Gelibolu’ya counts
-const mentions = (text, label) => [label, label.replace(/\s*\(.*\)$/, '')].some(l => l && new RegExp(`(?<![\\p{L}\\p{N}])${l.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'u').test(text));
+const NO_SPACES = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}]/u;
+const mentions = (text, label) => [label, label.replace(/\s*\(.*\)$/, '')].some(l => l && NO_SPACES.test(l) ? text.includes(l) : l && new RegExp(`(?<![\\p{L}\\p{N}])${l.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'u').test(text));
 
 // The story's content as text: story.yaml, the page tree with each page's text, the images they show, and what the
 // engine read from its own files and fields. onProblem(folder, message, page id) takes each problem, else the first
@@ -200,7 +203,7 @@ function readContent(p, storyDir, engine, onProblem = null) {
   // A scope is the story's files or an included item's, such as a battle's. It carries the translator of its
   // catalogues, the image libraries it sees, how its ids and page ids read in the story, and where its texts go.
   // textFallback lets a page without a text in a language show the scope's default language text.
-  const scope = (fields) => ({ kind: 'story', T, defaultLang, imageDirs: [storyImages, commonImages], ns: id => id, pageId: id => id, texts, firstImages, fallbacks: {}, textFallback: false, prepare: null, decorate: null, include: null, ...fields });
+  const scope = (fields) => ({ kind: 'story', T, defaultLang, imageDirs: [storyImages, commonImages], ns: id => id, pageId: id => id, texts, firstImages, fallbacks: {}, textFallback: true, prepare: null, decorate: null, include: null, ...fields });
   const storyScope = scope({});
   // what the engine's hooks see
   const ctx = { root, content: p.content, rel, where, storyFile: rel(storyFile), story, langs, defaultLang, T, fail, attempt, warn: m => warnings.push(m), log, readYaml, readJson, loadYaml: p.loadYaml,
@@ -226,7 +229,7 @@ function readContent(p, storyDir, engine, onProblem = null) {
   // --- pages ---
   const figure = (id, lang) => {
     const im = images[id];
-    return `<figure><img src="${esc(im.src)}" alt="${esc(im.caption[lang])}" data-img="${esc(id)}"><figcaption>${esc(im.caption[lang])}<small>${esc(im.credit[lang])}</small></figcaption></figure>`;
+    return `<figure><img src="${esc(im.src)}" alt="${esc(im.caption[lang])}" data-img="${esc(id)}"><figcaption>${esc(im.caption[lang])}<small dir="auto">${esc(im.credit[lang])}</small></figcaption></figure>`;
   };
   // per page and language: the Markdown source, and the first image the text shows, for the static pages
   function readPage(dir, s) {
@@ -296,7 +299,8 @@ function readContent(p, storyDir, engine, onProblem = null) {
   const coverImage = story.cover ? attempt(storyDir, () => resolveImage(storyScope, story.cover, `${rel(storyFile)} cover`)) ?? null : null;
   // the engine's checks over the whole story, the images its items show, and the folders it read catalogues from
   const fin = attempt(storyDir, () => engine.read.finish({ story, pages, texts, images, coverImage }, ctx)) ?? {};
-  // an included item's page without a text in a language showed its default language text
+  // a page without a text in a language showed its default language text
+  for (const [lang, ids] of Object.entries(storyScope.fallbacks)) warnings.push(`no ${lang} text on ${ids.join(', ')}, they show the ${defaultLang} text`);
   for (const f of fin.folders ?? []) for (const [lang, ids] of Object.entries(f.fallbacks ?? {})) warnings.push(`${f.kind} "${f.id}" has no ${lang} text on ${ids.join(', ')}, they show the ${f.defaultLang} text`);
   // the bundle and dist/ hold what the pages show: the images of their texts, and the ones the engine's items show
   const shownImages = new Set([...pages.flatMap(pg => langs.flatMap(l => [...(texts[pg.id]?.[l] ?? '').matchAll(/^@image\s+(\S+)\s*$/gm)].map(m => m[1]))),
@@ -313,7 +317,7 @@ function readContent(p, storyDir, engine, onProblem = null) {
     const moved = pages[i].include !== prev.include ? pages[i].include ?? prev.include : null;
     fail(where, `${pages[i].dir} starts ${pages[i].when.from}, before ${prev.dir} which starts ${prev.when.from}; ${moved ? `renumber ${moved} to move it` : 'fix the folder numbers or the when fields'}`);
   });
-  return { story, langs, defaultLang, T, entries, translations: report, tree, images, icons, pages, texts, firstImages, warnings: [...warnings, ...(fin.warnings ?? [])], unlinked,
+  return { story, langs, defaultLang, T, entries, translations: report, tree, images, icons, pages, texts, firstImages, warnings: [...warnings, ...(fin.warnings ?? [])], unlinked, fallbacks: storyScope.fallbacks,
     imageFolders: Object.values(folderImages), shippedImages: shipped, coverImage, engine: E, folders: fin.folders ?? [], state: E };
 }
 
@@ -330,7 +334,7 @@ function buildStory(p, storyDir, site, engine) {
   const { log, root } = p;
   const where = p.rel(storyDir);
   const content = readContent(p, storyDir, engine);
-  const { story, langs, defaultLang, T, entries, translations, tree, images, icons, pages, texts, firstImages, warnings, imageFolders, shippedImages, coverImage, folders } = content;
+  const { story, langs, defaultLang, T, entries, translations, tree, images, icons, pages, texts, firstImages, warnings, imageFolders, shippedImages, coverImage, folders, fallbacks } = content;
   for (const w of warnings) log(`  warning: ${w}`);
   const ui = uiFor(langs, root, engine);
   const { tr: siteT } = translator({ langs, defaultLang: site.default_language ?? defaultLang, catalogues: loadCatalogues(path.join(root, 'i18n'), langs, p.loadYaml), where: 'i18n', fail });
@@ -397,7 +401,11 @@ function buildStory(p, storyDir, site, engine) {
     log(`  ${label}${lang}: ${total - missing.length} of ${total} strings translated${missing.length ? `, ${missing.length} missing (kitap i18n ${lang})` : ''}${extra}`);
     if (p.strict && missing.length) fail(at, `${lang}: ${missing.length} strings missing, first: ${missing.slice(0, 8).join(', ')}`);
   };
-  for (const [lang, r] of Object.entries(translations())) covered('', lang, r.total, r.missing, where);
+  for (const [lang, r] of Object.entries(translations())) {
+    const noText = fallbacks[lang] ?? [];
+    covered('', lang, r.total, r.missing, where, noText.length ? `, ${noText.length} pages without text/${lang}.md` : '');
+    if (p.strict && noText.length) fail(where, `${lang}: no text/${lang}.md on ${noText.join(', ')}`);
+  }
   // an included item's own pages count their texts: a page without a text in the language is a gap too
   for (const f of folders.filter(f => f.pages)) for (const [lang, r] of Object.entries(f.translator.report())) {
     const noText = f.fallbacks?.[lang] ?? [];
@@ -489,7 +497,8 @@ export function checkStory({ root = process.cwd(), story, pages = [], places = f
   const problems = [];
   try {
     const e = engineOf(p, readSite(p), engine);
-    const { tree, unlinked } = readContent(p, storyDir, e, (dir, msg, pageId) => { if (inScope(pageId)) problems.push(msg); });
+    const { tree, unlinked, fallbacks } = readContent(p, storyDir, e, (dir, msg, pageId) => { if (inScope(pageId)) problems.push(msg); });
+    for (const [lang, ids] of Object.entries(fallbacks)) { const n = ids.filter(inScope).length; if (n) log(`${lang}: ${n} pages without text/${lang}.md show the default language text`); }
     if (places) for (const u of unlinked) if (inScope(u.pageId)) log(`${u.file}: ${u.names.join(', ')}`);
     const ids = new Set(), collect = nodes => { for (const n of nodes) n.type === 'page' ? ids.add(n.id) : collect(n.children); };
     collect(tree);

@@ -7,7 +7,7 @@ sources: "Джерела"
 chronology: "Зміст"
 language: "Мова"
 hint: "Гортайте стрілками."
-pages: "сторінок"
+pages: { one: "сторінка", few: "сторінки", many: "сторінок", other: "сторінки" }
 open: "Відкрити"
 theme: "Тема"
 expand_all: "Розгорнути все"

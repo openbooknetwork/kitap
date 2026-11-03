@@ -7,7 +7,7 @@ sources: "Źródła"
 chronology: "Spis treści"
 language: "Język"
 hint: "Przechodź dalej strzałkami."
-pages: "str."
+pages: { one: "strona", few: "strony", many: "stron", other: "strony" }
 open: "Otwórz"
 theme: "Motyw"
 expand_all: "Rozwiń wszystko"

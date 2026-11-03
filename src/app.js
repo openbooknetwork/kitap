@@ -36,7 +36,7 @@ const phone = matchMedia('(max-width:900px)');
 function openImage(id){
   const im = B.images[id];
   $('lb-img').src = im.src; $('lb-img').alt = L(im.caption);
-  $('lb-cap').innerHTML = `${esc(L(im.caption))}<small>${esc(L(im.credit))}</small>`;
+  $('lb-cap').innerHTML = `${esc(L(im.caption))}<small dir="auto">${esc(L(im.credit))}</small>`;
   $('lightbox').hidden = false; $('lb-close').focus();
 }
 function closeImage(){ $('lightbox').hidden = true; }
@@ -77,7 +77,7 @@ function renderChrome(){
   $('mapdata').hidden = !B.credits.length;
   $('othersrc').innerHTML = `${ICONS['external-link']}<span>${esc(T().other_sources)}</span>`; $('othersrc').setAttribute('aria-label', T().other_sources);
   $('ask').innerHTML = `${ICONS['message-circle']}<span>${esc(T().ask)}</span>`; $('ask').setAttribute('aria-label', T().ask); $('ask').hidden = !B.site.ask.length;
-  $('credits').innerHTML = `<p class="made">${credit(T())}</p><h4>${esc(T().map_data)}</h4><ul>${B.credits.map(c => `<li>${esc(L(c))}</li>`).join('')}</ul>`;
+  $('credits').innerHTML = `<p class="made">${credit(T())}</p><h4>${esc(T().map_data)}</h4><ul>${B.credits.map(c => `<li dir="auto">${esc(L(c))}</li>`).join('')}</ul>`;
   $('prev').innerHTML = `${ICONS['chevron-left']} ${esc(T().prev)}`;
   $('next').innerHTML = `${esc(T().next)} ${ICONS['chevron-right']}`;
   $('lb-close').textContent = T().close;
@@ -141,7 +141,7 @@ function renderWhere(p){
   $('crumbs').textContent = (pathTo(B.tree, cur) ?? []).map(g => L(g.title)).join(' › ');
   // the header holds the story's title, so the overview's line names its span alone
   $('here').innerHTML = p === OVERVIEW ? `<small>${esc(L(B.span))}</small>` : `<small>${esc(L(p.date))}</small>${esc(L(p.title))}`;
-  const count = cur < 0 ? '' : `${cur + 1} / ${PAGES.length}`;
+  const count = cur < 0 ? '' : `${num(cur + 1, T(), lang)} / ${num(PAGES.length, T(), lang)}`;
   $('contents').innerHTML = `${ICONS.list} ${esc(count || T().contents)}`;
   $('contents').setAttribute('aria-label', count ? `${T().contents}, ${count}` : T().contents);
 }
@@ -163,7 +163,7 @@ function renderPeek(){
 function renderCredits(p){
   const list = p.credits?.[lang] ?? [];
   $('othersrc').hidden = !list.length; $('othercredits').hidden = true; $('othersrc').setAttribute('aria-expanded', false);
-  $('othercredits').innerHTML = list.length ? `<h4>${esc(T().other_sources)}</h4><ul>${list.map(s => `<li>${s.url
+  $('othercredits').innerHTML = list.length ? `<h4>${esc(T().other_sources)}</h4><ul>${list.map(s => `<li dir="auto">${s.url
     ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.text)}</a>` : esc(s.text)}</li>`).join('')}</ul>` : '';
 }
 function renderStory(p){
@@ -173,7 +173,7 @@ function renderStory(p){
       + `<p><a class="start" href="${esc(pageLink(0))}" data-page="0">${esc(T().start)} ${ICONS['chevron-right']}</a></p>`;
     document.title = L(B.title);
   } else {
-    const sources = p.sources[lang].length ? `<h3>${esc(T().sources)}</h3><ol>${p.sources[lang].map(x => `<li>${esc(x)}</li>`).join('')}</ol>` : '';
+    const sources = p.sources[lang].length ? `<h3>${esc(T().sources)}</h3><ol>${p.sources[lang].map(x => `<li dir="auto">${esc(x)}</li>`).join('')}</ol>` : '';
     story.innerHTML = `${L(p.date) ? `<div class="date">${esc(L(p.date))}</div>` : ''}<h2>${esc(L(p.title))}</h2>${p.html[lang]}${sources}`;
     document.title = `${L(p.title)} - ${L(B.title)}`;
   }
@@ -182,7 +182,7 @@ function renderStory(p){
   story.scrollTop = 0;
   legend.hidden = true; $('legend-btn').hidden = true; // the engine fills the legend and shows the button for a page that has one
   renderPeek();
-  $('stepno').textContent = cur < 0 ? '' : `${cur + 1} / ${PAGES.length}`;
+  $('stepno').textContent = cur < 0 ? '' : `${num(cur + 1, T(), lang)} / ${num(PAGES.length, T(), lang)}`;
   $('prev').disabled = cur < 0; $('next').disabled = cur === PAGES.length - 1;
 }
 // reveal centres the current page in the contents; a click in the contents itself leaves the scroll alone

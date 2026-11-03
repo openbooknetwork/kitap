@@ -38,6 +38,8 @@ header a.src:focus-visible{outline:2px solid var(--accent)}
 .ctl{display:grid;grid-template-columns:1fr auto 1fr;gap:.571rem .714rem;align-items:center;padding-top:.714rem;border-top:1px solid var(--rule);background:var(--paper)}
 .ctl button{min-height:max(3.143rem,3.15rem);background:var(--panel);color:var(--ink);border:1px solid var(--rule);border-radius:6px;padding:0 1rem;font:inherit;font-size:1.071rem;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:.429rem}
 .ctl button svg{width:1.286rem;height:1.286rem}
+html:lang(ko){word-break:keep-all}
+html:lang(th) .place{white-space:nowrap}
 :root[dir="rtl"] :is(#prev,#next,.bc .pic .nav button) svg{transform:scaleX(-1)} /* the chevrons point the way the text reads */
 .ctl button:disabled{opacity:.35;cursor:default}
 .ctl button:focus-visible{outline:2px solid var(--accent)}

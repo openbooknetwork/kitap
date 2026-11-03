@@ -56,8 +56,9 @@ kitap rehash | kitap upload [--story <id>] [--dry-run] | kitap deploy [--dry-run
 ```
 
 An engine's own binary runs the same commands with its engine, `harita build` for instance, and adds its own.
-`--strict` fails on a missing translation or an object the store lacks; `--local-assets` shows the files on this
-machine before they are uploaded.
+A page without a text in a language shows the default language's text. `--strict` fails on a missing translation,
+a page text included, or an object the store lacks; `--local-assets` shows the files on this machine before they are
+uploaded.
 
 `image-candidates` searches Wikimedia Commons for each page of a story and downloads what it finds to
 `<story>/.candidates/<page>/`, listed with author, license and source in `.candidates/index.yaml`. The queries file

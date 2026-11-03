@@ -2,6 +2,9 @@
 // the files crawlers ask for: sitemaps, robots.txt, llms.txt and each story as Markdown.
 // Paths are relative to the folder a page's <base> names. URLs are absolute and come from site.yaml's url.
 
+// a count in the language's digits, and an interface word in the plural form the count takes
+const num = (n, ui, l) => new Intl.NumberFormat(l, { numberingSystem: ui.digits ?? 'latn', useGrouping: false }).format(n);
+const plural = (v, n, l) => typeof v === 'string' ? v : v[new Intl.PluralRules(l).select(n)] ?? v.other;
 export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 // JSON inside a <script> element, with < escaped so a "</script>" in the content stays text
 const scriptJson = v => JSON.stringify(v).replace(/</g, '\\u003c');
@@ -119,7 +122,7 @@ export function storyFiles({ shell, bundle: B, texts, firstImages, links, coverI
       const description = describe(firstParagraph(p.html[lang]));
       const canonical = site.url ? site.abs(stepAt(lang, p.id)) : null;
       const image = firstImages[p.id]?.[lang] ? ogImage(firstImages[p.id][lang]) : cover;
-      const sources = p.sources[lang].length ? `<h3>${esc(T.sources)}</h3><ol>${p.sources[lang].map(x => `<li>${esc(x)}</li>`).join('')}</ol>` : '';
+      const sources = p.sources[lang].length ? `<h3>${esc(T.sources)}</h3><ol>${p.sources[lang].map(x => `<li dir="auto">${esc(x)}</li>`).join('')}</ol>` : '';
       const step = (j, label) => pages[j] ? `<a href="${lang}/${pages[j].id}/" data-page="${j}">${esc(label)}: ${esc(L(pages[j].title))}</a>` : '<span></span>';
       const text = `<div class="date">${esc(L(p.date))}</div><h2>${esc(L(p.title))}</h2>${p.html[lang]}${sources}<p class="steps">${step(i - 1, T.prev)}${step(i + 1, T.next)}</p>`;
       const title = `${L(p.title)} - ${L(B.title)}`;
@@ -184,7 +187,7 @@ export function siteFiles({ shell, data: S, image: imageIn = null, site: siteIn,
       <div class="detail" id="d-${i}" hidden>
         <div>
           <p>${esc(L(s.summary))}</p>
-          <div class="meta"><span>${s.pages} ${esc(T.pages)}</span><span>${esc(s.languages.map(l => S.ui[l]?.name ?? l).join(', '))}</span></div>
+          <div class="meta"><span>${num(s.pages, T, lang)} ${esc(plural(T.pages, s.pages, lang))}</span><span>${esc(s.languages.map(l => S.ui[l]?.name ?? l).join(', '))}</span></div>
           <a class="open" href="${esc(s.id)}/${storyLang(s, lang)}/">${esc(T.open)}</a>
         </div>
         <div class="cover">${s.cover ? `<img src="${esc(s.cover)}" alt="">` : `<span>${esc(L(s.title))}</span>`}</div>

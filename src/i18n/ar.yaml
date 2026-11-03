@@ -7,7 +7,7 @@ sources: "المصادر"
 chronology: "المحتويات"
 language: "اللغة"
 hint: "تنقّل بالأسهم."
-pages: "صفحة"
+pages: { zero: "صفحة", one: "صفحة", two: "صفحتان", few: "صفحات", many: "صفحة", other: "صفحة" }
 open: "فتح"
 theme: "السمة"
 expand_all: "توسيع الكل"

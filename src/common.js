@@ -1,5 +1,8 @@
 // Helpers shared by the story page and the site index. The build inlines this file into both.
 const $ = id => document.getElementById(id);
+// a count in the language's digits, and an interface word in the plural form the count takes
+const num = (n, ui, l) => new Intl.NumberFormat(l, { numberingSystem: ui.digits ?? 'latn', useGrouping: false }).format(n);
+const plural = (v, n, l) => typeof v === 'string' ? v : v[new Intl.PluralRules(l).select(n)] ?? v.other;
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 // Per browser preferences. Storage can be missing or blocked, so every access is guarded.
