@@ -154,6 +154,8 @@ function readContent(p, storyDir, engine, onProblem = null) {
   const icons = {}, icon = (name, at) => icons[name] ??= iconSvg(name, at);
   for (const n of SHELL_ICONS) icon(n, where);
   const texts = {}, firstImages = {};
+  // per page id, the page's folder and each language's text as on disk, for kitap i18n --stale and --stamp
+  const pageTexts = {};
   // per text file, the names the page's engine items carry that the text writes without a link, for check --places
   const unlinked = [];
 
@@ -236,6 +238,7 @@ function readContent(p, storyDir, engine, onProblem = null) {
     const file = path.join(dir, 'page.yaml'), at = rel(file), own = idOf(path.basename(dir)), pid = s.pageId(own);
     const pg = check(pageSchema(engine), lift(p.loadYaml(file), engine, engine.schemas.page), at);
     const texts = s.texts[pid] = {}, firstImages = s.firstImages[pid] = {};
+    const pageText = pageTexts[pid] = { dir: rel(dir), texts: {} };
     const need = (ok, msg) => attempt(dir, () => ok || fail(at, msg));
     const w = pg.when == null ? null : typeof pg.when === 'string' ? { from: pg.when } : pg.when;
     const when = w && { from: whenEdge(w.from, false), to: whenEdge(w.to ?? w.from, true) };
@@ -255,6 +258,7 @@ function readContent(p, storyDir, engine, onProblem = null) {
       }
       if (!found) fail(rel(dir), `text/${lang}.md is missing`);
       const [textFile, source] = found;
+      if (!fallback) pageText.texts[lang] = source;
       // the image ids become the bundle's, so the Markdown export and og:image find an included item's images
       texts[lang] = source.replace(/^(@image\s+)(\S+)(\s*)$/gm, (_, head, imgId, tail) => {
         const id = resolveImage(s, imgId, rel(textFile));
@@ -318,7 +322,7 @@ function readContent(p, storyDir, engine, onProblem = null) {
     fail(where, `${pages[i].dir} starts ${pages[i].when.from}, before ${prev.dir} which starts ${prev.when.from}; ${moved ? `renumber ${moved} to move it` : 'fix the folder numbers or the when fields'}`);
   });
   return { story, langs, defaultLang, T, entries, translations: report, tree, images, icons, pages, texts, firstImages, warnings: [...warnings, ...(fin.warnings ?? [])], unlinked, fallbacks: storyScope.fallbacks,
-    imageFolders: Object.values(folderImages), shippedImages: shipped, coverImage, engine: E, folders: fin.folders ?? [], state: E };
+    imageFolders: Object.values(folderImages), shippedImages: shipped, coverImage, engine: E, folders: fin.folders ?? [], state: E, pageTexts };
 }
 
 // The objects a story links to: its images with their keys and where their originals are, the engine's objects in
@@ -334,7 +338,7 @@ function buildStory(p, storyDir, site, engine) {
   const { log, root } = p;
   const where = p.rel(storyDir);
   const content = readContent(p, storyDir, engine);
-  const { story, langs, defaultLang, T, entries, translations, tree, images, icons, pages, texts, firstImages, warnings, imageFolders, shippedImages, coverImage, folders, fallbacks } = content;
+  const { story, langs, defaultLang, T, entries, translations, tree, images, icons, pages, texts, firstImages, warnings, imageFolders, shippedImages, coverImage, folders, fallbacks, pageTexts } = content;
   for (const w of warnings) log(`  warning: ${w}`);
   const ui = uiFor(langs, root, engine);
   const { tr: siteT } = translator({ langs, defaultLang: site.default_language ?? defaultLang, catalogues: loadCatalogues(path.join(root, 'i18n'), langs, p.loadYaml), where: 'i18n', fail });
@@ -429,7 +433,7 @@ function buildStory(p, storyDir, site, engine) {
   const folderI18n = Object.fromEntries([...folders.map(f => [f.dir, f]), ...imageFolders.map(f => [f.dir, { kind: 'image', ...f }])]
     .map(([dir, f]) => [dir, { kind: f.kind, id: f.id, defaultLang: f.defaultLang, langs, entries: [...f.translator.entries.values()] }]));
   return { format: CARD_FORMAT, id: story.id, dir: where, title: bundle.title, summary, span, languages: langs, defaultLanguage: defaultLang, pages: pages.length,
-    cover: coverLinks?.large ?? null, coverOg: coverLinks?.og ?? null, i18n: [...entries.values()], objects, folderI18n, localKeys, redirects, tree: objects.tree };
+    cover: coverLinks?.large ?? null, coverOg: coverLinks?.og ?? null, i18n: [...entries.values()], objects, folderI18n, pageTexts, localKeys, redirects, tree: objects.tree };
 }
 
 // The names of the story folders below content/, in groups too, with each one's folder in p.storyDirs. content/shared/
@@ -452,7 +456,7 @@ function buildIndex(p, cards, site, engine) {
   const data = {
     title: T(site.title, 'site.title'), intro: site.intro ? T(site.intro, 'site.intro') : {},
     languages: langs, defaultLanguage: defaultLang, ui, repository: site.repository ?? null, icons: { settings: iconSvg('settings', 'site.yaml'), languages: iconSvg('languages', 'site.yaml') },
-    stories: order.map(id => { const { dir, i18n, objects, folderI18n, localKeys, redirects, tree, coverOg, ...card } = cards.find(c => c.id === id); return card; }),
+    stories: order.map(id => { const { dir, i18n, objects, folderI18n, pageTexts, localKeys, redirects, tree, coverOg, ...card } = cards.find(c => c.id === id); return card; }),
     themes: themeList(site.themes, ui, langs), defaultTheme: site.theme,
   };
   for (const [lang, r] of Object.entries(report())) {
@@ -607,7 +611,7 @@ export function buildPages({ root = process.cwd(), log = console.log, strict = f
     if (kept) { cards.push(kept); continue; }
     log(`story ${s}`);
     const card = buildStory(p, p.storyDirs.get(s), site, e);
-    const { i18n, objects, folderI18n, tree, ...saved } = card;
+    const { i18n, objects, folderI18n, pageTexts, tree, ...saved } = card;
     writeCache(cardFile(s), { ...saved, local: localAssets });
     cards.push(card);
   }
@@ -635,7 +639,8 @@ export function buildPages({ root = process.cwd(), log = console.log, strict = f
     for (const e of b.entries) if (!into.entries.has(e.key)) into.entries.set(e.key, e);
   }
   const folders = Object.fromEntries(Object.entries(merged).map(([dir, f]) => [dir, { ...f, langs: [...f.langs], entries: [...f.entries.values()] }]));
-  return { dist: p.dist, themes: site.themes, engine: e, stories: cards.map(({ i18n, objects, folderI18n, localKeys, redirects, tree, coverOg, local, ...card }) => card), i18n: { stories: Object.fromEntries(built.map(c => [c.id, { dir: c.dir, entries: c.i18n }])), site: p.siteEntries, folders },
+  return { dist: p.dist, themes: site.themes, engine: e, stories: cards.map(({ i18n, objects, folderI18n, pageTexts, localKeys, redirects, tree, coverOg, local, ...card }) => card),
+    i18n: { stories: Object.fromEntries(built.map(c => [c.id, { dir: c.dir, entries: c.i18n, langs: c.languages, defaultLang: c.defaultLanguage, pages: c.pageTexts, folders: Object.keys(c.folderI18n) }])), site: p.siteEntries, siteLang: site.defaultLang, folders },
     objects: built.map(c => ({ story: c.id, dir: c.dir, ...c.objects })), trees: built.map(c => ({ ...c.tree, dir: c.dir })), assets: site.assets ?? null };
 }
 

@@ -49,7 +49,7 @@ something the engine shows on the page, a marker on a map or a part of a model.
 kitap build [--strict] [--local-assets] [--only <story>] [--story <id>] [--out <dir>]
 kitap check <story> [page id ...] [--places]
 kitap dev [--story <id>] [--out <dir>] [--port <n>]
-kitap i18n <lang> [--story <id>]
+kitap i18n <lang> [--story <id>] [--stale | --stamp]
 kitap image <file or url> <name> --caption <text> [--credit <text>] [--source <url>] [--story <id>]
 kitap image-candidates <story> --queries <file> [--limit <n>] [--pages <id,id>] [--out <name>]
 kitap rehash | kitap upload [--story <id>] [--dry-run] | kitap deploy [--dry-run]
@@ -59,6 +59,13 @@ An engine's own binary runs the same commands with its engine, `harita build` fo
 A page without a text in a language shows the default language's text. `--strict` fails on a missing translation,
 a page text included, or an object the store lacks; `--local-assets` shows the files on this machine before they are
 uploaded.
+
+`i18n` writes a language's catalogues with the source text above each key. `--stale` then writes
+`.cache/kitap/stale/<story>/<lang>.yaml` per story: the paragraphs and strings whose source changed since the last
+stamp, each with the new source and the current translation, and what has no translation yet. A translator sent to
+update a story reads that list in place of the story. `--stamp` records the hash of the source behind every
+translated paragraph and string in `i18n/stamps/<lang>.yaml` of the story, of each folder it uses and of the site.
+Run it after a review.
 
 `image-candidates` searches Wikimedia Commons for each page of a story and downloads what it finds to
 `<story>/.candidates/<page>/`, listed with author, license and source in `.candidates/index.yaml`. The queries file
