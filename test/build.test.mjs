@@ -30,8 +30,10 @@ test('a book builds every page in every language with the engine in its viewport
   assert.deepEqual(B.site.ask, ['chatgpt', 'claude']);
   assert.equal(B.ui.en.hint, 'Just read.', 'the engine lays its strings over the book\'s');
   assert.equal(B.ui.en.prev, 'Prev');
+  assert.equal(B.ui.en.network, 'Part of the {network}');
   const html = read(root, 'dist/first-story/en/one/index.html');
   assert.ok(html.includes('<script src="../plain.js?v=') && html.includes('<script src="../kitap.js?v='));
+  for (const f of [html, read(root, 'dist/en/index.html')]) assert.ok(f.includes('id="network-menu" href="https://openbooknetwork.org/"'), 'every page links the network');
   assert.ok(html.includes('<span class="place" data-thing="apple" tabindex="0">apple</span>'), 'a link in the text takes the engine\'s attribute');
   assert.ok(fs.existsSync(path.join(root, 'dist/plain.js')) && fs.existsSync(path.join(root, 'dist/kitap.js')));
   assert.ok(fs.existsSync(path.join(root, 'dist/vendor/fonts.css')));

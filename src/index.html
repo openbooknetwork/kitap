@@ -20,6 +20,9 @@ h1,h2{font-family:var(--display);font-weight:500;margin:0;text-wrap:balance}
 header{display:flex;align-items:center;gap:1.143rem;flex-wrap:wrap;border-bottom:1px solid var(--rule);padding-bottom:.714rem}
 header h1{font-size:1.857rem}
 header .controls{margin-inline-start:auto;display:flex;gap:.571rem}
+header .network{color:var(--ink-2);font-size:.929rem}
+header .network a{color:inherit}
+header .network a:hover{color:var(--ink)}
 header a.contribute{color:var(--ink-2);font-size:.929rem;text-decoration:none;border:1px solid var(--rule);border-radius:4px;padding:.357rem .714rem;display:inline-flex;align-items:center}
 header a.contribute:hover{color:var(--ink)}
 header a.contribute:focus-visible{outline:2px solid var(--accent)}
@@ -51,7 +54,7 @@ header .prefs{position:relative}
   header{flex-wrap:nowrap;gap:.571rem}
   header h1{flex:1;min-width:0;font-size:1.429rem}
   header .controls{gap:.429rem}
-  header a.contribute{display:none}
+  header a.contribute,header .network{display:none}
   /* the native select lies invisible over the code, so a tap opens the phone's own list of full names; 16px stops iOS zooming */
   .langpick{position:relative;min-height:max(40px,2.857rem);padding-inline:.571rem;gap:.286rem}
   .langpick .code{display:inline;font-weight:600}
@@ -111,7 +114,7 @@ html:lang(ko){word-break:keep-all}
 <div class="wrap">
   <header>
     <h1 id="title"></h1>
-    <div class="controls"><a class="contribute" id="contribute" target="_blank" rel="noopener" hidden></a>
+    <div class="controls"><span class="network" id="network"></span><a class="contribute" id="contribute" target="_blank" rel="noopener" hidden></a>
       <label class="langpick" id="langpick"><span id="lang-icon" aria-hidden="true"></span><span class="code" id="lang-code" aria-hidden="true"></span><select id="lang"></select></label>
       <div class="prefs">
         <button type="button" id="settings-btn" aria-expanded="false" aria-controls="settings"></button>
@@ -119,6 +122,7 @@ html:lang(ko){word-break:keep-all}
           <div class="group layout-group"><span id="layout-label"></span><div class="layouts" id="layouts" role="radiogroup"></div></div>
           <label class="group"><span id="theme-label"></span><select id="theme"></select></label>
           <a class="src-link" id="contribute-menu" target="_blank" rel="noopener" hidden></a>
+          <a class="src-link" id="network-menu" href="https://openbooknetwork.org/" target="_blank" rel="noopener"></a>
         </div>
       </div>
     </div>
@@ -151,6 +155,10 @@ function render(){
   $('intro').textContent = L(S.intro);
   // phones keep the Contribute link in the settings panel instead of the header
   if (S.repository) for (const a of [$('contribute'), $('contribute-menu')]) { a.href = S.repository; a.textContent = S.ui[lang].contribute; a.hidden = false; }
+  // the network line names the network as a link on wide screens, and is a line of the settings menu on phones
+  const [before, after] = S.ui[lang].network.split('{network}');
+  $('network').innerHTML = `${esc(before)}<a href="https://openbooknetwork.org/" target="_blank" rel="noopener">Open Book Network</a>${esc(after ?? '')}`;
+  $('network-menu').textContent = S.ui[lang].network.replace('{network}', 'Open Book Network');
   fillSelect($('lang'), S.languages.map(l => ({ value: l, text: S.ui[l].name ?? l })), lang, S.ui[lang].language);
   $('lang-icon').innerHTML = S.icons.languages; $('lang-code').textContent = lang.toUpperCase(); $('langpick').title = S.ui[lang].language; $('langpick').hidden = S.languages.length < 2;
   fillSelect($('theme'), S.themes.map(t => ({ value: t.id, text: pick(t.name, lang, S.defaultLanguage, t.id) })), palette, S.ui[lang].theme);

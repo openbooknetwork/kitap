@@ -30,6 +30,9 @@ header a.back:hover{color:var(--ink)}
 header a.back:focus-visible{outline:2px solid var(--accent)}
 header .note{color:var(--ink-2);font-size:.857rem}
 header .tools{margin-inline-start:auto;display:flex;align-items:center;gap:.571rem}
+header .network{color:var(--ink-2);font-size:.857rem}
+header .network a{color:inherit}
+header .network a:hover{color:var(--ink)}
 header a.src{color:var(--ink-2);font-size:.857rem;text-decoration:none;display:inline-flex;align-items:center;gap:.286rem;border:1px solid var(--rule);border-radius:4px;padding:.286rem .571rem}
 header a.src svg{width:.929rem;height:.929rem}
 header a.src:hover{color:var(--ink)}
@@ -277,7 +280,7 @@ aside.story .extra{display:none}
   body{height:100dvh;overflow:hidden;padding-bottom:calc(5.15rem + 1px + env(safe-area-inset-bottom, 0px))}
   /* the header is one row: the back chevron, the title on one line, the language as its code, settings as an icon */
   header{flex-wrap:nowrap;gap:.571rem;padding-bottom:.429rem}
-  header .note,header a.src{display:none}
+  header .note,header a.src,header .network{display:none}
   header h1{flex:1;min-width:0;font-size:1.214rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   header a.back{flex:none;justify-content:center;min-width:2rem;min-height:max(40px,2.857rem)}
   header a.back span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
@@ -374,6 +377,7 @@ aside.story .extra{display:none}
   <h1 id="title"></h1>
   <span class="note" id="hint"></span>
   <div class="tools">
+    <span class="network" id="network"></span>
     <a class="src" id="src" target="_blank" rel="noopener" hidden></a>
     <label class="langpick" id="langpick"><span id="lang-icon" aria-hidden="true"></span><span class="code" id="lang-code" aria-hidden="true"></span><select id="lang"></select></label>
     <div class="prefs">
@@ -382,6 +386,7 @@ aside.story .extra{display:none}
         <div class="group layout-group"><span id="layout-label"></span><div class="layouts" id="layouts" role="radiogroup"></div></div>
         <label class="group"><span id="theme-label"></span><select id="theme"></select></label>
         <a class="src-link" id="src-menu" target="_blank" rel="noopener" hidden></a>
+        <a class="src-link" id="network-menu" href="https://openbooknetwork.org/" target="_blank" rel="noopener"></a>
       </div>
     </div>
   </div>

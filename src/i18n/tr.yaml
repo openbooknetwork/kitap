@@ -20,6 +20,7 @@ tab_map: Görünüm
 tab_text: Metin
 contents: İçindekiler
 contribute: Katkıda bulun
+network: "{network} üyesi"
 story_source: GitHub’da kaynağı
 generated_by: '{kitap} ile oluşturuldu'
 previous_image: Önceki görsel

@@ -72,6 +72,10 @@ function renderChrome(){
   $('hint').textContent = T().hint;
   // phones keep the source link in the settings panel instead of the header
   if (B.site.source) for (const a of [$('src'), $('src-menu')]) { a.href = B.site.source; a.innerHTML = `${ICONS['external-link']} ${esc(T().story_source)}`; a.hidden = false; }
+  // the network line names the network as a link on wide screens, and is a line of the settings menu on phones
+  const [before, after] = T().network.split('{network}');
+  $('network').innerHTML = `${esc(before)}<a href="https://openbooknetwork.org/" target="_blank" rel="noopener">Open Book Network</a>${esc(after ?? '')}`;
+  $('network-menu').textContent = T().network.replace('{network}', 'Open Book Network');
   $('made').innerHTML = credit(T());
   $('mapdata').innerHTML = `${ICONS.info}<span>${esc(T().map_data)}</span>`; $('mapdata').setAttribute('aria-label', T().map_data);
   $('mapdata').hidden = !B.credits.length;
