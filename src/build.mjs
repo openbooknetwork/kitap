@@ -3,6 +3,7 @@
 // files. The engine is the package that draws the viewport; its hooks are documented in README.md.
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
@@ -11,7 +12,7 @@ import { marked } from 'marked';
 import { check, Site, storySchema, pageSchema, Group, ImageFolder, Themes } from './schema.mjs';
 import { loadCatalogues, translator, flatten, unflatten } from './i18n.mjs';
 import { esc, ordinals, PLACE, siteContext, storyFiles, siteFiles } from './pages.mjs';
-import { libraryItems, storyFolders, isImage } from './folders.mjs';
+import { libraryItems, storyFolders, isImage, isBattle, isZone } from './folders.mjs';
 import { writeVendor } from './vendor.mjs';
 import { hash, listDirs, idOf } from './util.mjs';
 import { sha256, imageKeys } from './image.mjs';
@@ -43,6 +44,55 @@ const copyFresh = (file, dest) => {
   fs.copyFileSync(file, tmp); fs.renameSync(tmp, dest);
 };
 const writeCache = (file, value) => { fs.mkdirSync(path.dirname(file), { recursive: true }); const tmp = `${file}.${process.pid}`; fs.writeFileSync(tmp, JSON.stringify(value)); fs.renameSync(tmp, file); };
+
+// ---------- the live record: each story's inputs as the site bucket holds them ----------
+// kitap deploy writes RECORD_KEY to the pages bucket last. build --changed reads it from the site and rebuilds only
+// the stories whose inputs differ, so a fresh checkout builds what changed. A build writes BUILT_FILE into dist/
+// for deploy: the stories it built, with their fingerprints and cards.
+export const RECORD_KEY = 'kitap-build.json', BUILT_FILE = '.kitap-build.json', RECORD_FORMAT = 1;
+const KITAP_VERSION = JSON.parse(fs.readFileSync(path.join(PKG, 'package.json'), 'utf8')).version;
+// The files a build reads: content/, i18n/, plugins/ and site.yaml as git shows them, tracked or new and not ignored,
+// so a checkout and a working copy agree. Outside git every file counts. Dot folders hold notes and generators.
+function inputFiles(root) {
+  const roots = ['content', 'i18n', 'plugins', 'site.yaml'];
+  let files;
+  try { files = execFileSync('git', ['ls-files', '-z', '-co', '--exclude-standard', '--', ...roots], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).split('\0'); }
+  catch { files = roots.flatMap(r => !exists(path.join(root, r)) ? [] : fs.statSync(path.join(root, r)).isFile() ? [r] : fs.readdirSync(path.join(root, r), { recursive: true }).map(f => path.join(r, f))); }
+  return files.filter(Boolean).map(f => f.split(path.sep).join('/'))
+    .filter(f => !f.split('/').some(s => s.startsWith('.')) && fs.statSync(path.join(root, f), { throwIfNoEntry: false })?.isFile()).sort();
+}
+// What a story's fingerprint reads: the files under a folder, every file's hash once, and the inputs of every story:
+// site.yaml, the site catalogues, plugins, the files of content/shared/ outside an item folder, kitap and the engine.
+function inputSet(p, engine, engineJs) {
+  const files = inputFiles(p.root), sums = new Map();
+  const sum = f => { if (!sums.has(f)) sums.set(f, crypto.createHash('sha256').update(fs.readFileSync(path.join(p.root, f))).digest('hex')); return sums.get(f); };
+  const under = dir => files.filter(f => f.startsWith(dir.replace(/\/?$/, '/')));
+  const items = new Map(), isItem = d => { if (!items.has(d)) items.set(d, isImage(path.join(p.root, d)) || isBattle(path.join(p.root, d)) || isZone(path.join(p.root, d))); return items.get(d); };
+  const inItem = f => { const parts = f.split('/'); for (let i = 3; i < parts.length; i++) if (isItem(parts.slice(0, i).join('/'))) return true; return false; };
+  const loose = under('content/shared').filter(f => !inItem(f));
+  const shared = files.filter(f => !f.startsWith('content/')).concat(loose);
+  const enginePkg = engine.dir ? readCache(path.join(engine.dir instanceof URL ? fileURLToPath(engine.dir) : engine.dir, 'package.json'))?.version : null;
+  const tools = [RECORD_FORMAT, CARD_FORMAT, KITAP_VERSION, `${engine.id}@${enginePkg ?? ''}`, version(engineJs ?? '')];
+  return { fingerprint: (storyDir, folders = []) => hash([...tools, ...[...new Set([...under(storyDir), ...folders.flatMap(under), ...shared])].sort().map(f => `${f} ${sum(f)}`)]) };
+}
+// the shared folders a built story read, from the folders whose catalogues it carries
+const sharedFolders = card => Object.keys(card.folderI18n).map(d => d.split(path.sep).join('/')).filter(d => d.startsWith('content/shared/')).sort();
+
+// The record of the live site, read from site.yaml's url, or null when the site has none, so every story builds.
+async function liveRecord(root, get, log) {
+  const p = project(root, log), site = readSite(p);
+  if (!site.url) fail('site.yaml', 'add url: the address the site is published at, where build --changed reads the record of the live site');
+  const at = new URL(RECORD_KEY, site.url.endsWith('/') ? site.url : site.url + '/');
+  at.searchParams.set('t', String(Date.now())); // past the site's ten minute cache
+  try {
+    const res = await get(at.href);
+    if (res.status === 404) { log(`${at.origin} has no build record yet, so every story builds`); return null; }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const record = await res.json();
+    if (record?.format !== RECORD_FORMAT) { log(`the build record of ${at.origin} has another format, so every story builds`); return null; }
+    return record;
+  } catch (err) { log(`the build record of ${at.origin} did not load (${err.message}), so every story builds`); return null; }
+}
 const UI_DIR = path.join(PKG, 'src', 'i18n');
 const readUi = dir => Object.fromEntries(fs.readdirSync(dir).filter(f => f.endsWith('.yaml')).map(f => [f.replace(/\.yaml$/, ''), yaml.load(fs.readFileSync(path.join(dir, f), 'utf8')) ?? {}]));
 const UI = readUi(UI_DIR);
@@ -549,11 +599,15 @@ function engineScript(engine) {
 // Every story under root/content into root/dist, without the engine's objects. kitap i18n reads its strings.
 // only names story folders to build; the others keep their last build, and their main page cards come from the cache.
 // story builds that one story folder into a site of its own, its main page listing it alone. out replaces dist/.
+// changed builds the stories whose fingerprints differ from live, the record of the live site, and the main page
+// takes the others' cards from it. A build of every story or of the changed ones writes dist/.kitap-build.json.
 // Pages link the images and objects in the store of site.yaml's assets, or with localAssets copies in dist/assets/.
-export function buildPages({ root = process.cwd(), log = console.log, strict = false, cache = path.join(root, '.cache', 'kitap'), only = null, story = null, out = null, localAssets = false, engine = null, ...options } = {}) {
+export function buildPages({ root = process.cwd(), log = console.log, strict = false, cache = path.join(root, '.cache', 'kitap'), only = null, story = null, out = null, localAssets = false, engine = null, changed = false, live = null, ...options } = {}) {
   const p = project(root, log);
   p.strict = strict; p.cache = cache; p.local = localAssets; p.options = options;
   if (out) p.dist = path.resolve(root, out);
+  if (changed && (only || story)) fail('build', 'build --changed picks the stories itself, leave out --only and --story');
+  if (changed && localAssets) fail('build', 'build --changed builds what the live site lacks, whose pages link the asset store: leave out --local-assets');
   const stories = storyNames(p);
   if (!stories.length) fail('content/', 'no story.yaml found, run this from a content project');
   for (const s of [...(only ?? []), ...(story ? [story] : [])]) if (!stories.includes(s)) fail('content/', `"${s}" is not a story folder, the stories are ${stories.join(', ')}`);
@@ -567,6 +621,14 @@ export function buildPages({ root = process.cwd(), log = console.log, strict = f
   const site = readSite(p);
   if (!site.themes[site.theme]) fail('site.yaml', `unknown theme "${site.theme}"`);
   const e = engineOf(p, site, engine);
+  const engineJs = engineScript(e);
+  site.engineVersion = version(engineJs);
+  // a story whose fingerprint matches the live record keeps its pages online, and its card comes from the record
+  const recording = !only && !story, inputs = recording ? inputSet(p, e, engineJs) : null, liveStories = live?.stories ?? {};
+  const dirOf = s => p.rel(p.storyDirs.get(s)).split(path.sep).join('/');
+  const matches = s => { const l = liveStories[s]; return l?.card?.format === CARD_FORMAT && l.hash === inputs.fingerprint(dirOf(s), l.shared ?? []); };
+  const unchanged = new Set(changed ? stories.filter(matches) : []);
+  if (changed) log(unchanged.size ? `${unchanged.size} of ${stories.length} stories match the live site: ${[...unchanged].join(', ')}` : 'no story matches the live site');
   const store = site.assets?.url ?? null;
   if (!store && !localAssets) fail('site.yaml', 'add an assets block with the url, bucket and endpoint of the store for the images and the objects the pages show, or build with --local-assets to show the files on this machine');
   // an image links its objects in the store, or with --local-assets its original: the copy in dist/assets/, else its
@@ -592,11 +654,9 @@ export function buildPages({ root = process.cwd(), log = console.log, strict = f
   site.context = siteContext({ url: site.url, languages: site.langs, defaultLanguage: site.defaultLang });
   if (story) site.stories = [metas.find(([s]) => s === story)[1].id];
   // the engine's checks across the stories, such as drawings that copy one another
-  e.site({ root, cache, strict, log, stories: story ? [story] : only, fail, rel: p.rel, storyDirs: p.storyDirs, options });
+  e.site({ root, cache, strict, log, stories: story ? [story] : changed ? stories.filter(s => !unchanged.has(s)) : only, fail, rel: p.rel, storyDirs: p.storyDirs, options });
   // the scripts: the engine's libraries from dist/vendor/, its own script and kitap's
   const { paths: vendorPaths, imports } = writeVendor(p.dist, e);
-  const engineJs = engineScript(e);
-  site.engineVersion = version(engineJs);
   // a module engine imports its libraries through an import map of the vendored copies, from the story folder
   const importMap = Object.keys(imports).length ? `<script type="importmap">${JSON.stringify({ imports: Object.fromEntries(Object.entries(imports).map(([k, v]) => [k, `../${v}`])) })}</script>` : '';
   const tags = [importMap, ...vendorPaths.map(f => `<script src="../${f}"></script>`), ...(e.client?.styles ? [`<link rel="stylesheet" href="../${e.id}.css">`] : [])].filter(Boolean);
@@ -605,16 +665,22 @@ export function buildPages({ root = process.cwd(), log = console.log, strict = f
   writeFile(path.join(p.dist, 'kitap.js'), APP_JS);
   if (engineJs) writeFile(path.join(p.dist, `${e.id}.js`), engineJs);
   if (e.client?.styles) writeFile(path.join(p.dist, `${e.id}.css`), fs.readFileSync(e.client.styles instanceof URL ? fileURLToPath(e.client.styles) : e.client.styles, 'utf8'));
-  const cards = [];
+  const cards = [], records = [];
   for (const s of story ? [story] : stories) {
+    if (unchanged.has(s)) { cards.push(liveStories[s].card); continue; }
     const kept = only && !only.includes(s) && lastCard(s);
     if (kept) { cards.push(kept); continue; }
     log(`story ${s}`);
     const card = buildStory(p, p.storyDirs.get(s), site, e);
     const { i18n, objects, folderI18n, pageTexts, tree, ...saved } = card;
     writeCache(cardFile(s), { ...saved, local: localAssets });
+    if (recording) { const shared = sharedFolders(card); records.push({ story: s, hash: inputs.fingerprint(dirOf(s), shared), shared, card: saved }); }
     cards.push(card);
   }
+  // deploy reads what this build holds: every story with its folder in dist/, the ones built, and the live record
+  const builtFile = path.join(p.dist, BUILT_FILE);
+  if (recording) writeFile(builtFile, JSON.stringify({ format: RECORD_FORMAT, stories: stories.map((s, i) => [s, cards[i].id]), built: records, live: changed ? liveStories : {} }));
+  else fs.rmSync(builtFile, { force: true });
   buildIndex(p, cards, site, e);
   // the Worker and kitap dev redirect the image paths of harita 0.4 to the originals, see routes.mjs
   const redirects = Object.fromEntries(cards.flatMap(c => Object.entries(c.redirects ?? {})).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0));
@@ -647,8 +713,10 @@ export function buildPages({ root = process.cwd(), log = console.log, strict = f
 // Build every story under root/content into root/dist. Returns the dist folder and one card per story. Pages link
 // the images and objects in the asset store, and with strict the store must hold each of them. With localAssets the
 // originals here and the engine's objects are made into dist/assets/. The engine keeps its own caches under cache.
-export async function build({ root = process.cwd(), log = console.log, strict = false, cache = path.join(root, '.cache', 'kitap'), only = null, story = null, out = null, localAssets = false, engine = null, ...options } = {}) {
-  const { objects, trees, assets, engine: e, ...r } = buildPages({ root, log, strict, cache, only, story, out, localAssets, engine, ...options });
+// With changed it reads the record of the live site from site.yaml's url through get, and builds what differs.
+export async function build({ root = process.cwd(), log = console.log, strict = false, cache = path.join(root, '.cache', 'kitap'), only = null, story = null, out = null, localAssets = false, engine = null, changed = false, get = globalThis.fetch, ...options } = {}) {
+  const live = changed && !only && !story && !localAssets ? await liveRecord(root, get, log) : null;
+  const { objects, trees, assets, engine: e, ...r } = buildPages({ root, log, strict, cache, only, story, out, localAssets, engine, changed, live, ...options });
   if (localAssets && e.make) await e.make({ stories: objects, cache, out: path.join(r.dist, 'assets'), log, options });
   else if (strict) await checkStore({ url: assets.url, trees, log, describe: e.describeObjects });
   return r;

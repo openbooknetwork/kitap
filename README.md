@@ -46,7 +46,7 @@ something the engine shows on the page, a marker on a map or a part of a model.
 ## Commands
 
 ```
-kitap build [--strict] [--local-assets] [--only <story>] [--story <id>] [--out <dir>]
+kitap build [--strict] [--local-assets] [--changed] [--only <story>] [--story <id>] [--out <dir>]
 kitap check <story> [page id ...] [--places]
 kitap dev [--story <id>] [--out <dir>] [--port <n>]
 kitap i18n [<lang>] [--story <id>] [--stale | --stamp]
@@ -133,6 +133,15 @@ upload`, one on the site bucket as the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCES
 workflow, and a wrangler token with Workers Scripts Edit and Workers Routes Edit as `CLOUDFLARE_API_TOKEN` with
 the account id as `CLOUDFLARE_ACCOUNT_ID`. `scripts/cloudflare-redirect.mjs <old zone> <new zone>` sends a
 retired domain to the new one.
+
+`kitap deploy` puts up the files of `dist/` the bucket lacks or holds in another version, and deletes the keys
+`dist/` lacks. Last it writes `kitap-build.json`, the record of the live site: each story's fingerprint, the shared
+folders it reads and its main page card. A fingerprint hashes the story's folder, the shared folders it reads,
+`site.yaml`, `i18n/`, `plugins/`, the files of `content/shared/` outside an image, battle or zone folder, and the
+versions of kitap and the engine, as git lists the files. `kitap build --changed` reads the record from `url` and
+builds only the stories whose fingerprints differ, and the main page takes the other stories' cards from the
+record. The deploy after it keeps those stories' files in the bucket as they are. A site without a record, or a
+record that does not load, builds every story, so a fresh checkout in CI builds what changed and nothing else.
 
 ## Work on it
 
