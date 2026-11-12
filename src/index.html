@@ -76,7 +76,15 @@ select#theme:focus-visible{outline:2px solid var(--accent)}
 .listbar button,.toggle-all{background:none;border:1px solid var(--rule);border-radius:4px;color:var(--ink-2);font:inherit;font-size:.857rem;padding:.286rem .714rem;cursor:pointer}
 .listbar button:hover,.toggle-all:hover{color:var(--ink)}
 .listbar button:focus-visible,.toggle-all:focus-visible{outline:2px solid var(--accent)}
+.levels{display:flex;flex-wrap:wrap;gap:.429rem;margin-top:.857rem}
+.levels[hidden]{display:none}
+.levels button{background:none;border:1px solid var(--rule);border-radius:999px;color:var(--ink-2);font:inherit;font-size:.857rem;min-height:max(36px,2.286rem);padding:0 .857rem;cursor:pointer}
+.levels button:hover{color:var(--ink)}
+.levels button:focus-visible{outline:2px solid var(--accent)}
+.levels button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
 .rows{list-style:none;margin:0;padding:0;border-top:1px solid var(--rule)}
+.rows .level{display:flex;align-items:baseline;gap:.571rem;padding:1.429rem .571rem .429rem;border-bottom:1px solid var(--rule);font-family:var(--display);font-size:1.143rem;color:var(--ink)}
+.rows .level small{font-family:var(--body);font-size:.857rem;color:var(--ink-2)}
 .row{border-bottom:1px solid var(--rule)}
 .row > button{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:.286rem 1.143rem;align-items:baseline;width:100%;text-align:start;background:none;border:0;
   color:var(--ink);font:inherit;padding:1rem .571rem;cursor:pointer}
@@ -129,6 +137,7 @@ html:lang(ko){word-break:keep-all}
   </header>
   <p class="intro" id="intro"></p>
   <div class="listbar"><input type="search" id="search" autocomplete="off" spellcheck="false"><button type="button" id="toggle-all"></button></div>
+  <div class="levels" id="levels" role="group" hidden></div>
   <ul class="rows" id="rows"></ul>
   <footer class="credit" id="credit"></footer>
 </div>
@@ -146,7 +155,12 @@ const L = field => pick(field, lang, S.defaultLanguage);
 const open = new Set();
 // search: a case insensitive substring of the title in the current language, folded by that language's rules
 let query = '';
-const visible = () => { const q = query.trim().toLocaleLowerCase(lang); return q ? S.stories.filter(s => L(s.title).toLocaleLowerCase(lang).includes(q)) : S.stories; };
+// the level the reader chose to see alone, on a site that has levels
+let level = null;
+const visible = () => {
+  const q = query.trim().toLocaleLowerCase(lang), list = level ? S.stories.filter(s => s.level === level) : S.stories;
+  return q ? list.filter(s => L(s.title).toLocaleLowerCase(lang).includes(q)) : list;
+};
 const allOpen = () => visible().every(s => open.has(s.id));
 function render(){
   document.documentElement.lang = lang; document.documentElement.dir = S.ui[lang].dir;
@@ -170,10 +184,20 @@ function render(){
   $('search').placeholder = S.ui[lang].search_stories; $('search').setAttribute('aria-label', S.ui[lang].search_stories);
   $('toggle-all').textContent = toggleLabel(S.ui[lang], allOpen());
   $('credit').innerHTML = credit(S.ui[lang]); $('credit').hidden = !S.credit;
+  $('levels').hidden = !S.levels;
+  if (S.levels) {
+    $('levels').setAttribute('aria-label', S.ui[lang].all_levels);
+    // a level with no story yet has no button
+    $('levels').innerHTML = [{ id: '', name: S.ui[lang].all_levels }, ...S.levels.filter(v => S.stories.some(s => s.level === v.id)).map(v => ({ id: v.id, name: L(v.name) }))]
+      .map(v => `<button type="button" data-level="${esc(v.id)}" aria-pressed="${(level ?? '') === v.id}">${esc(v.name)}</button>`).join('');
+  }
   const shown = visible();
   $('toggle-all').hidden = !shown.length;
   if (!shown.length) { $('rows').innerHTML = `<li class="empty">${esc(S.ui[lang].no_match.replace('{q}', query.trim()))}</li>`; return; }
-  $('rows').innerHTML = shown.map((s, i) => `
+  // a site with levels lists each level under its name, with the level's stories by title
+  let i = -1;
+  $('rows').innerHTML = byLevel(shown, S.levels, lang, S.defaultLanguage).map(g => (g.level ? `
+    <li class="level">${esc(L(g.level.name))} <small>${num(g.stories.length, S.ui[lang], lang)}</small></li>` : '') + g.stories.map(s => (i++, `
     <li class="row">
       <button type="button" aria-expanded="${open.has(s.id)}" aria-controls="d-${i}" data-id="${esc(s.id)}">
         <span class="span">${esc(L(s.span))}</span><h2>${esc(L(s.title))}</h2><span class="chev"></span>
@@ -187,8 +211,12 @@ function render(){
         </div>
         <div class="cover">${s.cover ? `<img src="${esc(s.cover)}" alt="">` : `<span>${esc(L(s.title))}</span>`}</div>
       </div>
-    </li>`).join('');
+    </li>`)).join('')).join('');
 }
+$('levels').addEventListener('click', e => {
+  const b = e.target.closest('button[data-level]'); if (!b) return;
+  level = b.dataset.level || null; render();
+});
 $('rows').addEventListener('click', e => {
   const b = e.target.closest('button[data-id]'); if (!b) return;
   const id = b.dataset.id; open.has(id) ? open.delete(id) : open.add(id);

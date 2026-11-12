@@ -52,6 +52,42 @@ test('credit: false in site.yaml leaves the kitap note out of the story and the 
   assert.ok(read(root, 'dist/en/index.html').includes('"credit":false'));
 });
 
+test('levels in site.yaml give every story a level and group the main page by level, each level by title', async () => {
+  const root = copy(), story = 'content/first-story/story.yaml';
+  fs.appendFileSync(path.join(root, 'site.yaml'), '\nlevels: [beginner, advanced]\n');
+  await assert.rejects(make(root), /first-story\/story\.yaml:? ?\n?.*level is missing, site\.yaml lists the levels beginner, advanced/s);
+  fs.appendFileSync(path.join(root, story), '\nlevel: expert\n');
+  await assert.rejects(make(root), /level is "expert", site\.yaml lists the levels beginner, advanced/);
+  edit(root, story, 'level: expert', 'level: advanced');
+  await make(root);
+  const html = read(root, 'dist/en/index.html');
+  assert.ok(html.includes('"levels":[{"id":"beginner","name":{"en":"Beginner"'), 'the main page knows the levels and their names');
+  assert.ok(html.includes('"level":"advanced"'), 'a story card carries its level');
+  assert.ok(html.includes('<li class="level">Advanced <small>1</small></li>'), 'the page lists a level that has stories under its name');
+  assert.ok(!html.includes('<li class="level">Beginner'), 'a level with no story has no heading');
+  fs.writeFileSync(path.join(root, 'site.yaml'), read(root, 'site.yaml').replace('levels: [beginner, advanced]', ''));
+  await assert.rejects(make(root), /level is "advanced", and site\.yaml lists no levels/);
+});
+
+test('follows in story.yaml chains two stories, and follows.js names each one\'s neighbours', async () => {
+  const root = copy(), first = 'content/first-story/story.yaml', second = 'content/second-story/story.yaml';
+  fs.cpSync(path.join(root, 'content/first-story'), path.join(root, 'content/second-story'), { recursive: true });
+  edit(root, second, 'id: first-story', 'id: second-story');
+  fs.appendFileSync(path.join(root, second), '\nfollows: nowhere\n');
+  await assert.rejects(make(root), /second-story\/story\.yaml.*follows names "nowhere", the stories are first-story, second-story/s);
+  edit(root, second, 'follows: nowhere', 'follows: second-story');
+  await assert.rejects(make(root), /follows names the story itself/);
+  edit(root, second, 'follows: second-story', 'follows: first-story');
+  await make(root);
+  const js = read(root, 'dist/follows.js'), chain = JSON.parse(js.slice('window.KITAP_FOLLOWS = '.length, js.lastIndexOf(';')));
+  assert.equal(chain['first-story'].next.id, 'second-story');
+  assert.equal(chain['first-story'].previous, null);
+  assert.equal(chain['second-story'].previous.id, 'first-story');
+  assert.ok(chain['second-story'].previous.title.en, 'a neighbour carries its title in each language');
+  fs.appendFileSync(path.join(root, first), '\nfollows: second-story\n');
+  await assert.rejects(make(root), /follows leads back to .* in a circle/);
+});
+
 test('a field the engine does not know fails naming the file and the field, and a flat engine field is lifted under its key', async () => {
   const root = copy();
   edit(root, 'content/first-story/pages/020-two/page.yaml', 'plain: { note: hello }', 'note: hello');

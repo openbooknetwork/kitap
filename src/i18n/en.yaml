@@ -40,6 +40,13 @@ layout: Layout
 layout_center: Picture in the middle
 layout_left: Text on the left
 layout_right: Text on the right
+follows: "This story follows {story}."
+next_story: "Next story: {story}"
+all_levels: All levels
+levels:
+  beginner: Beginner
+  intermediate: Intermediate
+  advanced: Advanced
 themes:
   cool: Cool
   mono: Mono

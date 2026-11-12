@@ -40,6 +40,13 @@ layout: Yerleşim
 layout_center: Resim ortada
 layout_left: Metin solda
 layout_right: Metin sağda
+follows: "Bu hikâye şunun devamıdır: {story}."
+next_story: "Sonraki hikâye: {story}"
+all_levels: Tüm düzeyler
+levels:
+  beginner: Başlangıç
+  intermediate: Orta
+  advanced: İleri
 themes:
   cool: Soğuk
   mono: Tek renk

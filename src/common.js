@@ -20,6 +20,11 @@ const preferredLang = (langs, fallback) => {
 const pick = (field, lang, defaultLang, fallback = '') =>
   typeof field === 'string' ? field : field?.[lang] ?? field?.[defaultLang] ?? fallback;
 
+// The stories as the main page lists them. A site with levels groups them by level in the site's order, and lists
+// a level's stories by title in the page's language. A site without levels keeps its own order in one group.
+const byLevel = (stories, levels, lang, defaultLang) => !levels ? [{ level: null, stories }]
+  : levels.map(level => ({ level, stories: stories.filter(s => s.level === level.id).sort((a, b) => pick(a.title, lang, defaultLang).localeCompare(pick(b.title, lang, defaultLang), lang)) })).filter(g => g.stories.length);
+
 function fillSelect(sel, items, current, label) {
   sel.setAttribute('aria-label', label); sel.innerHTML = '';
   for (const { value, text } of items) { const o = document.createElement('option'); o.value = value; o.textContent = text; o.selected = value === current; sel.appendChild(o); }

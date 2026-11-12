@@ -31,7 +31,7 @@ const INDEX = fs.readFileSync(path.join(PKG, 'src', 'index.html'), 'utf8').repla
 // a script's version in its URL, so a browser holding the last release's copy fetches the new one
 const version = text => hash(text).slice(0, 10);
 // the shape of the main page card kept in the cache. A card of another shape counts as no cache.
-const CARD_FORMAT = 6;
+const CARD_FORMAT = 8;
 // Cache files are written whole and renamed into place, so a build running at the same time reads the old file or
 // the new one. A file that is missing or does not parse counts as no cache.
 const readCache = file => { try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return null; } };
@@ -143,6 +143,8 @@ function uiFor(langs, root, engine) {
   // a missing key falls back to English alone
   return Object.fromEntries(langs.map(l => [l, { ...unflatten({ ...shipped(engine, 'en'), ...shipped(engine, l), ...uiOwn(root, l) }), dir: textDir(l), digits: DIGITS[l.split('-')[0]] ?? 'latn' }]));
 }
+// A level's name in each language: the interface string levels.<id>, else the id.
+const levelList = (levels, ui, langs) => levels.map(id => ({ id, name: Object.fromEntries(langs.map(l => [l, ui[l].levels?.[id] ?? id])) }));
 const themeList = (themes, ui, langs) => Object.entries(themes).map(([id, t]) => ({ id, name: Object.fromEntries(langs.map(l => [l, ui[l].themes?.[id] ?? (typeof t.name === 'string' ? t.name : t.name?.[l] ?? t.name?.en) ?? id])) }));
 
 // A map field written at the top level of story.yaml or page.yaml is sent under the engine's key, so a file from
@@ -482,7 +484,7 @@ function buildStory(p, storyDir, site, engine) {
   // kitap i18n writes the catalogues of each image folder and each folder of the engine's in that folder
   const folderI18n = Object.fromEntries([...folders.map(f => [f.dir, f]), ...imageFolders.map(f => [f.dir, { kind: 'image', ...f }])]
     .map(([dir, f]) => [dir, { kind: f.kind, id: f.id, defaultLang: f.defaultLang, langs, entries: [...f.translator.entries.values()] }]));
-  return { format: CARD_FORMAT, id: story.id, dir: where, title: bundle.title, summary, span, languages: langs, defaultLanguage: defaultLang, pages: pages.length,
+  return { format: CARD_FORMAT, id: story.id, dir: where, level: story.level ?? null, follows: story.follows ?? null, title: bundle.title, summary, span, languages: langs, defaultLanguage: defaultLang, pages: pages.length,
     cover: coverLinks?.large ?? null, coverOg: coverLinks?.og ?? null, i18n: [...entries.values()], objects, folderI18n, pageTexts, localKeys, redirects, tree: objects.tree };
 }
 
@@ -503,17 +505,29 @@ function buildIndex(p, cards, site, engine) {
   for (const id of order) if (!cards.find(c => c.id === id)) fail('site.yaml', `unknown story "${id}"`);
   const { tr: T, entries, report } = translator({ langs, defaultLang, catalogues: loadCatalogues(path.join(p.root, 'i18n'), langs, p.loadYaml), where: 'i18n', fail });
   const ui = uiFor(langs, p.root, engine);
+  // a site that lists levels gives every story one of them, and a site that lists none has stories without one
+  for (const c of cards) {
+    const at = `content/${c.dir}/story.yaml`;
+    if (site.levels && !c.level) fail(at, `level is missing, site.yaml lists the levels ${site.levels.join(', ')}`);
+    if (site.levels && c.level && !site.levels.includes(c.level)) fail(at, `level is "${c.level}", site.yaml lists the levels ${site.levels.join(', ')}`);
+    if (!site.levels && c.level) fail(at, `level is "${c.level}", and site.yaml lists no levels: add levels: [${c.level}] to site.yaml`);
+  }
   const data = {
     title: T(site.title, 'site.title'), intro: site.intro ? T(site.intro, 'site.intro') : {},
     languages: langs, defaultLanguage: defaultLang, ui, repository: site.repository ?? null, credit: site.credit !== false, icons: { settings: iconSvg('settings', 'site.yaml'), languages: iconSvg('languages', 'site.yaml') },
     stories: order.map(id => { const { dir, i18n, objects, folderI18n, pageTexts, localKeys, redirects, tree, coverOg, ...card } = cards.find(c => c.id === id); return card; }),
-    themes: themeList(site.themes, ui, langs), defaultTheme: site.theme,
+    themes: themeList(site.themes, ui, langs), defaultTheme: site.theme, levels: site.levels ? levelList(site.levels, ui, langs) : null,
   };
   for (const [lang, r] of Object.entries(report())) {
     if (r.missing.length) p.log(`site ${lang}: ${r.missing.length} of ${r.total} strings missing (kitap i18n ${lang})`);
     if (p.strict && r.missing.length) fail('site.yaml', `${lang}: missing ${r.missing.join(', ')}`);
   }
   p.siteEntries = [...entries.values()];
+  // follows.js beside kitap.js names, for each story of a chain, the story before it and the story after it. A
+  // story page loads it, so a story's link to the next one needs no rebuild of the story.
+  const link = c => c ? { id: c.id, title: c.title, languages: c.languages, defaultLanguage: c.defaultLanguage } : null;
+  const chain = Object.fromEntries(cards.map(c => [c.id, { previous: link(cards.find(x => x.id === c.follows)), next: link(cards.find(x => x.follows === c.id)) }]).filter(([, v]) => v.previous || v.next));
+  writeFile(path.join(p.dist, 'follows.js'), `window.KITAP_FOLLOWS = ${JSON.stringify(chain)};\n`);
   const css = themeCss(site.themes, site.theme);
   // the 404 page speaks every language a site or story page does
   const notFoundUi = uiFor([...new Set([...langs, ...cards.flatMap(c => c.languages)])], p.root, engine);
@@ -651,6 +665,20 @@ export function buildPages({ root = process.cwd(), log = console.log, strict = f
   for (const [s, m] of metas) if (codes.has(m.id)) fail(p.rel(storyFile(s)), `the story id "${m.id}" is also a language code, and both would be the folder dist/${m.id}/, so give the story another id`);
   // dist/assets/ holds the images and objects of a --local-assets build
   for (const [s, m] of metas) if (m.id === 'assets') fail(p.rel(storyFile(s)), `the story id "${m.id}" names the folder dist/${m.id}/ that holds the images and objects of a --local-assets build, so give the story another id`);
+  // a story follows one story of the book and one story follows it, so the stories form chains with one next story
+  const named = new Map(metas.map(([s, m]) => [m.id, [s, m]])), after = new Map();
+  for (const [s, m] of metas) {
+    if (!m.follows) continue;
+    const at = p.rel(storyFile(s));
+    if (m.follows === m.id) fail(at, 'follows names the story itself, name the story that comes before it');
+    if (!named.has(m.follows)) fail(at, `follows names "${m.follows}", the stories are ${[...named.keys()].join(', ')}`);
+    if (after.has(m.follows)) fail(at, `follows names "${m.follows}", which "${after.get(m.follows)}" follows already, so let one of the two follow the other`);
+    after.set(m.follows, m.id);
+    for (let seen = new Set([m.id]), cur = m; cur.follows; cur = named.get(cur.follows)[1]) {
+      if (seen.has(cur.follows)) fail(at, `follows leads back to "${cur.follows}" in a circle, so one story of the circle follows none`);
+      seen.add(cur.follows);
+    }
+  }
   site.context = siteContext({ url: site.url, languages: site.langs, defaultLanguage: site.defaultLang });
   if (story) site.stories = [metas.find(([s]) => s === story)[1].id];
   // the engine's checks across the stories, such as drawings that copy one another

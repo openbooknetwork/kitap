@@ -178,7 +178,12 @@ export function siteFiles({ shell, data: S, image: imageIn = null, site: siteIn,
 
   const main = (lang, base, bare) => {
     const L = f => pick(f, lang, def), T = S.ui[lang];
-    const rows = S.stories.map((s, i) => `
+    // the same order as the main page's script gives: by level where the site has levels, then by title
+    const groups = !S.levels ? [{ level: null, stories: S.stories }]
+      : S.levels.map(level => ({ level, stories: S.stories.filter(s => s.level === level.id).sort((a, b) => L(a.title).localeCompare(L(b.title), lang)) })).filter(g => g.stories.length);
+    let i = -1;
+    const rows = groups.map(g => (g.level ? `
+    <li class="level">${esc(L(g.level.name))} <small>${num(g.stories.length, T, lang)}</small></li>` : '') + g.stories.map(s => (i++, `
     <li class="row">
       <button type="button" aria-expanded="false" aria-controls="d-${i}" data-id="${esc(s.id)}">
         <span class="span">${esc(L(s.span))}</span><h2>${esc(L(s.title))}</h2><span class="chev"></span>
@@ -192,7 +197,7 @@ export function siteFiles({ shell, data: S, image: imageIn = null, site: siteIn,
         </div>
         <div class="cover">${s.cover ? `<img src="${esc(s.cover)}" alt="">` : `<span>${esc(L(s.title))}</span>`}</div>
       </div>
-    </li>`).join('');
+    </li>`)).join('')).join('');
     let html = fill(shell, '<html lang="en">', `<html lang="${lang}" dir="${T.dir}">`);
     html = fill(html, '<!--__HEAD__-->', head({ base, title: L(S.title), description: describe(L(S.intro)), lang, site,
       canonical: site.url ? site.abs(homeAt(lang)) : null, alternates: bare ? [] : alternatesFor(site, langs, def, homeAt), image }));
@@ -216,12 +221,13 @@ ${['sitemap-main.xml', ...S.stories.map(s => `${s.id}/sitemap.xml`)].map(f => `<
     const L = f => pick(f, def, def);
     files['llms.txt'] = [`# ${L(S.title)}`, '', ...(S.intro?.[def] ? [`> ${L(S.intro)}`, ''] : []),
       'Each story is one Markdown file per language: the title and summary, then every step with its date, text and sources.', '',
-      '## Stories', '',
-      ...S.stories.map(s => {
+      // a site with levels lists the stories under each level's name
+      ...(S.levels ? S.levels.map(v => ({ title: L(v.name), stories: S.stories.filter(s => s.level === v.id).sort((a, b) => L(a.title).localeCompare(L(b.title), def)) })).filter(g => g.stories.length)
+        : [{ title: 'Stories', stories: S.stories }]).flatMap(g => [`## ${g.title}`, '', ...g.stories.map(s => {
         const sl = storyLang(s, def), others = s.languages.filter(l => l !== sl);
         const also = others.length ? ` Also in ${others.map(l => `[${S.ui[l]?.name ?? l}](${site.abs(`${s.id}/${l}.md`)})`).join(', ')}.` : '';
         return `- [${pick(s.title, sl, s.defaultLanguage)}](${site.abs(`${s.id}/${sl}.md`)}): ${pick(s.summary, sl, s.defaultLanguage)}${also}`;
-      }), ''].join('\n');
+      }), ''])].join('\n');
   }
   return files;
 }

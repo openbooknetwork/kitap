@@ -23,6 +23,7 @@ export const Site = z.object({
   languages: z.array(Lang).min(1).optional(),
   default_language: Lang.optional(),
   stories: z.array(Id).optional(),
+  levels: z.array(Id).min(1).optional(), // the levels a story can have, in order: the main page groups the stories by them
   engine: Id.optional(), // the engine that draws the stories' pictures, resolved from the project's packages or plugins/engines/
   theme: Id.optional(),
   themes: Themes.optional(),
@@ -42,6 +43,8 @@ export const StoryCore = {
   title: Translatable,
   summary: Translatable.optional(),
   span: Translatable.optional(),
+  level: Id.optional(), // one of the site's levels, where site.yaml lists them
+  follows: Id.optional(), // the story that comes before this one: that story's last page links to this one
   cover: z.string().regex(/^[a-z0-9][a-z0-9-]*$/, 'the id of an image folder the story can show, kitap image <file> <name> --story <story> makes one').optional(), // the card on the main page
   languages: z.array(Lang).min(1),
   default_language: Lang.optional(),

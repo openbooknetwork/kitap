@@ -172,6 +172,21 @@ function renderCredits(p){
   $('othercredits').innerHTML = list.length ? `<h4>${esc(T().other_sources)}</h4><ul>${list.map(s => `<li dir="auto">${s.url
     ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.text)}</a>` : esc(s.text)}</li>`).join('')}</ul>` : '';
 }
+// The stories before and after this one, from the site's follows.js. The overview names the story this one follows,
+// and the last page links the story that follows this one. The line is added to the text as it stands, because an
+// engine may have written into the text already.
+let CHAIN = null;
+const chain = document.createElement('p'); chain.className = 'chain';
+function placeChain(){
+  chain.remove();
+  const to = cur < 0 ? CHAIN?.previous : cur === PAGES.length - 1 ? CHAIN?.next : null;
+  if (!to) return;
+  const l = to.languages.includes(lang) ? lang : to.defaultLanguage, title = esc(pick(to.title, l, to.defaultLanguage));
+  const [before, after] = (cur < 0 ? T().follows : T().next_story).split('{story}'), href = esc('../' + storyLink(to.id, l));
+  chain.innerHTML = cur < 0 ? `${esc(before)}<a href="${href}">${title}</a>${esc(after ?? '')}`
+    : `<a class="start" href="${href}">${esc(before)}${title}${esc(after ?? '')} ${ICONS['chevron-right']}</a>`;
+  story.appendChild(chain);
+}
 function renderStory(p){
   renderWhere(p);
   if (p === OVERVIEW) {
@@ -184,6 +199,7 @@ function renderStory(p){
     document.title = `${L(p.title)} - ${L(B.title)}`;
   }
   story.querySelector('h2').after(extra);
+  placeChain();
   renderCredits(p);
   story.scrollTop = 0;
   legend.hidden = true; $('legend-btn').hidden = true; // the engine fills the legend and shows the button for a page that has one
@@ -287,5 +303,6 @@ let V = {};
 renderChrome(); renderNav(); renderStory(here());
 // a classic engine script has set KITAP_ENGINE already; a module one sets it after this script and says so
 const mount = () => { V = window.KITAP_ENGINE(host); V.show?.(here(), true); };
+{ const s = document.createElement('script'); s.src = '../follows.js'; s.onload = () => { CHAIN = window.KITAP_FOLLOWS?.[B.id] ?? null; placeChain(); }; document.head.appendChild(s); }
 if (window.KITAP_ENGINE) mount(); else addEventListener('kitap-engine', mount, { once: true });
 writeRoute(false);
