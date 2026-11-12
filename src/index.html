@@ -169,7 +169,7 @@ function render(){
   $('layouts').innerHTML = layoutButtons(S.ui[lang], pref('layout', LAYOUTS, 'center'));
   $('search').placeholder = S.ui[lang].search_stories; $('search').setAttribute('aria-label', S.ui[lang].search_stories);
   $('toggle-all').textContent = toggleLabel(S.ui[lang], allOpen());
-  $('credit').innerHTML = credit(S.ui[lang]);
+  $('credit').innerHTML = credit(S.ui[lang]); $('credit').hidden = !S.credit;
   const shown = visible();
   $('toggle-all').hidden = !shown.length;
   if (!shown.length) { $('rows').innerHTML = `<li class="empty">${esc(S.ui[lang].no_match.replace('{q}', query.trim()))}</li>`; return; }

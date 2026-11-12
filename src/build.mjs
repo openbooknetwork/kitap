@@ -433,7 +433,7 @@ function buildStory(p, storyDir, site, engine) {
   // --- bundle and pages ---
   const bundle = {
     id: story.id, title: T(story.title, 'story.title'), summary, span, cover, languages: langs, defaultLanguage: defaultLang, ui, families, engine: engine.id,
-    site: { title: siteT(site.title, 'site.title'), languages: site.langs, defaultLanguage: site.defaultLang, ask: site.ask ?? [],
+    site: { title: siteT(site.title, 'site.title'), languages: site.langs, defaultLanguage: site.defaultLang, ask: site.ask ?? [], credit: site.credit !== false,
       source: site.repository ? `${site.repository.replace(/\/$/, '')}/tree/${site.branch}/${where.split(path.sep).join('/')}` : null },
     themes: themeList(site.themes, ui, langs), defaultTheme: story.theme ?? site.theme,
     credits: eb.credits ?? [], images, icons, pages: pages.map(({ dir, include, ...p }) => p), tree: navTree(tree),
@@ -505,7 +505,7 @@ function buildIndex(p, cards, site, engine) {
   const ui = uiFor(langs, p.root, engine);
   const data = {
     title: T(site.title, 'site.title'), intro: site.intro ? T(site.intro, 'site.intro') : {},
-    languages: langs, defaultLanguage: defaultLang, ui, repository: site.repository ?? null, icons: { settings: iconSvg('settings', 'site.yaml'), languages: iconSvg('languages', 'site.yaml') },
+    languages: langs, defaultLanguage: defaultLang, ui, repository: site.repository ?? null, credit: site.credit !== false, icons: { settings: iconSvg('settings', 'site.yaml'), languages: iconSvg('languages', 'site.yaml') },
     stories: order.map(id => { const { dir, i18n, objects, folderI18n, pageTexts, localKeys, redirects, tree, coverOg, ...card } = cards.find(c => c.id === id); return card; }),
     themes: themeList(site.themes, ui, langs), defaultTheme: site.theme,
   };

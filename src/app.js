@@ -76,12 +76,12 @@ function renderChrome(){
   const [before, after] = T().network.split('{network}');
   $('network').innerHTML = `${esc(before)}<a href="https://openbooknetwork.org/" target="_blank" rel="noopener">Open Book Network</a>${esc(after ?? '')}`;
   $('network-menu').textContent = T().network.replace('{network}', 'Open Book Network');
-  $('made').innerHTML = credit(T());
+  $('made').innerHTML = credit(T()); $('made').hidden = !B.site.credit;
   $('mapdata').innerHTML = `${ICONS.info}<span>${esc(T().map_data)}</span>`; $('mapdata').setAttribute('aria-label', T().map_data);
   $('mapdata').hidden = !B.credits.length;
   $('othersrc').innerHTML = `${ICONS['external-link']}<span>${esc(T().other_sources)}</span>`; $('othersrc').setAttribute('aria-label', T().other_sources);
   $('ask').innerHTML = `${ICONS['message-circle']}<span>${esc(T().ask)}</span>`; $('ask').setAttribute('aria-label', T().ask); $('ask').hidden = !B.site.ask.length;
-  $('credits').innerHTML = `<p class="made">${credit(T())}</p><h4>${esc(T().map_data)}</h4><ul>${B.credits.map(c => `<li dir="auto">${esc(L(c))}</li>`).join('')}</ul>`;
+  $('credits').innerHTML = `${B.site.credit ? `<p class="made">${credit(T())}</p>` : ''}<h4>${esc(T().map_data)}</h4><ul>${B.credits.map(c => `<li dir="auto">${esc(L(c))}</li>`).join('')}</ul>`;
   $('prev').innerHTML = `${ICONS['chevron-left']} ${esc(T().prev)}`;
   $('next').innerHTML = `${esc(T().next)} ${ICONS['chevron-right']}`;
   $('lb-close').textContent = T().close;
@@ -167,6 +167,8 @@ function renderPeek(){
 function renderCredits(p){
   const list = p.credits?.[lang] ?? [];
   $('othersrc').hidden = !list.length; $('othercredits').hidden = true; $('othersrc').setAttribute('aria-expanded', false);
+  // the credit bar shows while it holds the note, the data credit or this page's other sources
+  $('credit').hidden = !B.site.credit && $('mapdata').hidden && !list.length;
   $('othercredits').innerHTML = list.length ? `<h4>${esc(T().other_sources)}</h4><ul>${list.map(s => `<li dir="auto">${s.url
     ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.text)}</a>` : esc(s.text)}</li>`).join('')}</ul>` : '';
 }

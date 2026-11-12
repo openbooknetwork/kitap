@@ -123,6 +123,8 @@ nav.pages button:focus-visible,nav.pages a.pg:focus-visible{outline:2px solid va
 .ask svg{width:1.143rem;height:1.143rem} .ask[hidden]{display:none} .ask:focus-visible{outline:2px solid var(--accent)}
 .credit{background:var(--panel);border:1px solid var(--rule);padding:3px .571rem;font-size:.786rem;color:var(--ink-2);pointer-events:auto;
   display:flex;align-items:center;gap:.571rem}
+.credit[hidden],.credit #made[hidden]{display:none}
+.credit #made[hidden]+#mapdata,.credit #made[hidden]+#mapdata[hidden]~#othersrc{border:0;padding:0}
 .credit a{color:inherit}
 .credit :is(#mapdata,#othersrc){background:none;border:0;border-inline-start:1px solid var(--rule);padding:0;padding-inline-start:.571rem;font:inherit;color:inherit;text-decoration:underline;cursor:pointer}
 .credit :is(#mapdata,#othersrc) svg{display:none;width:1.143rem;height:1.143rem}

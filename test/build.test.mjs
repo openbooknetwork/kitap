@@ -41,6 +41,17 @@ test('a book builds every page in every language with the engine in its viewport
   assert.deepEqual(check({ root, story: 'first-story', engine: plain }), []);
 });
 
+test('credit: false in site.yaml leaves the kitap note out of the story and the main page', async () => {
+  const root = copy();
+  await make(root);
+  assert.equal(bundleOf(root).site.credit, true);
+  assert.ok(read(root, 'dist/en/index.html').includes('"credit":true'));
+  fs.appendFileSync(path.join(root, 'site.yaml'), '\ncredit: false\n');
+  await make(root);
+  assert.equal(bundleOf(root).site.credit, false);
+  assert.ok(read(root, 'dist/en/index.html').includes('"credit":false'));
+});
+
 test('a field the engine does not know fails naming the file and the field, and a flat engine field is lifted under its key', async () => {
   const root = copy();
   edit(root, 'content/first-story/pages/020-two/page.yaml', 'plain: { note: hello }', 'note: hello');
