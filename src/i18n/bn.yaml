@@ -40,6 +40,13 @@ layout: "বিন্যাস"
 layout_center: "ছবি মাঝখানে"
 layout_left: "লেখা বাঁ দিকে"
 layout_right: "লেখা ডান দিকে"
+follows: "এই কাহিনিটি {story}-এর পরের অংশ।"
+next_story: "পরের কাহিনি: {story}"
+all_levels: "সব স্তর"
+levels:
+  beginner: "প্রাথমিক"
+  intermediate: "মধ্যম"
+  advanced: "উচ্চতর"
 themes:
   cool: "শীতল"
   mono: "একরঙা"

@@ -40,6 +40,13 @@ layout: "การจัดวาง"
 layout_center: "ภาพอยู่ตรงกลาง"
 layout_left: "ข้อความด้านซ้าย"
 layout_right: "ข้อความด้านขวา"
+follows: "เรื่องนี้ต่อจาก {story}"
+next_story: "เรื่องถัดไป: {story}"
+all_levels: "ทุกระดับ"
+levels:
+  beginner: "เริ่มต้น"
+  intermediate: "ปานกลาง"
+  advanced: "ขั้นสูง"
 themes:
   cool: "โทนเย็น"
   mono: "ขาวดำ"

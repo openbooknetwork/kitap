@@ -40,6 +40,13 @@ layout: "लेआउट"
 layout_center: "चित्र बीच में"
 layout_left: "पाठ बाईं ओर"
 layout_right: "पाठ दाईं ओर"
+follows: "यह कहानी {story} के बाद आती है।"
+next_story: "अगली कहानी: {story}"
+all_levels: "सभी स्तर"
+levels:
+  beginner: "शुरुआती"
+  intermediate: "मध्यम"
+  advanced: "उन्नत"
 themes:
   cool: "शीतल"
   mono: "एकरंगी"

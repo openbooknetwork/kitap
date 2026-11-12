@@ -490,6 +490,13 @@ function buildStory(p, storyDir, site, engine) {
 
 // The names of the story folders below content/, in groups too, with each one's folder in p.storyDirs. content/shared/
 // holds the images and the engine's items stories share.
+// The stories a build makes: every story but the drafts. A draft that the command names is built, for a look at it.
+function published(p, stories, named = []) {
+  const draft = s => { try { return p.loadYaml(path.join(p.storyDirs.get(s), 'story.yaml'))?.draft === true; } catch { return false; } };
+  const drafts = stories.filter(s => !named.includes(s) && draft(s));
+  if (drafts.length) p.log(`left out ${drafts.length === 1 ? 'the draft' : 'the drafts'} ${drafts.join(', ')}`);
+  return stories.filter(s => !drafts.includes(s));
+}
 function storyNames(p) {
   if (exists(path.join(p.content, 'shared', 'story.yaml'))) fail('content/shared/story.yaml', 'content/shared/ holds what the stories share, move this story to a folder of another name');
   try { p.storyDirs = storyFolders(p.content, p.rel); } catch (err) { fail('content/', err.message); }
@@ -592,9 +599,10 @@ function readSite(p) {
 // The objects each story links to and its hash tree, read as the build reads the stories, with the store of
 // site.yaml. story limits it to that story folder. kitap upload puts these objects in the store.
 export function storyAssets({ root = process.cwd(), story = null, log = console.log, engine = null, cache = path.join(root, '.cache', 'kitap') } = {}) {
-  const p = project(root, log), stories = storyNames(p);
-  if (!stories.length) fail('content/', 'no story.yaml found, run this from a content project');
-  if (story && !stories.includes(story)) fail('content/', `"${story}" is not a story folder, the stories are ${stories.join(', ')}`);
+  const p = project(root, log), every = storyNames(p);
+  if (!every.length) fail('content/', 'no story.yaml found, run this from a content project');
+  if (story && !every.includes(story)) fail('content/', `"${story}" is not a story folder, the stories are ${every.join(', ')}`);
+  const stories = published(p, every, story ? [story] : []);
   const site = readSite(p), e = engineOf(p, site, engine);
   if (!site.assets) fail('site.yaml', 'add an assets block with the url, bucket and endpoint of the store for the images and the objects the pages show');
   p.cache = cache;
@@ -622,9 +630,10 @@ export function buildPages({ root = process.cwd(), log = console.log, strict = f
   if (out) p.dist = path.resolve(root, out);
   if (changed && (only || story)) fail('build', 'build --changed picks the stories itself, leave out --only and --story');
   if (changed && localAssets) fail('build', 'build --changed builds what the live site lacks, whose pages link the asset store: leave out --local-assets');
-  const stories = storyNames(p);
-  if (!stories.length) fail('content/', 'no story.yaml found, run this from a content project');
-  for (const s of [...(only ?? []), ...(story ? [story] : [])]) if (!stories.includes(s)) fail('content/', `"${s}" is not a story folder, the stories are ${stories.join(', ')}`);
+  const every = storyNames(p);
+  if (!every.length) fail('content/', 'no story.yaml found, run this from a content project');
+  for (const s of [...(only ?? []), ...(story ? [story] : [])]) if (!every.includes(s)) fail('content/', `"${s}" is not a story folder, the stories are ${every.join(', ')}`);
+  const stories = published(p, every, [...(only ?? []), ...(story ? [story] : [])]);
   if (strict) {
     const tracked = trackedImages(root);
     if (tracked.length) fail('content/', `git tracks ${tracked.length} image file${tracked.length === 1 ? '' : 's'}, which belong in the asset store: ${tracked.slice(0, 5).join(', ')}${tracked.length > 5 ? ', …' : ''}. Add the .gitignore lines for image files and git rm --cached them`);

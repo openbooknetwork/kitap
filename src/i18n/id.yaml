@@ -40,6 +40,13 @@ layout: "Tata letak"
 layout_center: "Gambar di tengah"
 layout_left: "Teks di kiri"
 layout_right: "Teks di kanan"
+follows: "Cerita ini melanjutkan {story}."
+next_story: "Cerita berikutnya: {story}"
+all_levels: "Semua tingkat"
+levels:
+  beginner: "Pemula"
+  intermediate: "Menengah"
+  advanced: "Lanjutan"
 themes:
   cool: "Sejuk"
   mono: "Mono"

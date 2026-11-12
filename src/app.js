@@ -298,6 +298,8 @@ new MutationObserver(() => V.theme?.()).observe(document.documentElement, { attr
 const host = {
   B, engine: ENGINE, el: { map: $('map'), legend, story, label: $('hl-label'), view: $('view'), tools: document.querySelector('.maptools'), legendButton: $('legend-btn'), extra },
   here, isOverview: () => cur < 0, lang: () => lang, L, T, css, colorVar, esc, $, pref, savePref, reduced, canHover, phone, padding: fitPadding, openImage, closeImage, placeId, showText,
+  // the line beside the story's title that says how the picture is used: an engine's own words, or the hint string
+  lead: text => { $('hint').textContent = text ?? T().hint; },
 };
 let V = {};
 renderChrome(); renderNav(); renderStory(here());

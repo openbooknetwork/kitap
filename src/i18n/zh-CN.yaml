@@ -40,6 +40,13 @@ layout: "布局"
 layout_center: "图片居中"
 layout_left: "文字在左"
 layout_right: "文字在右"
+follows: "本故事承接《{story}》。"
+next_story: "下一个故事：{story}"
+all_levels: "所有级别"
+levels:
+  beginner: "初级"
+  intermediate: "中级"
+  advanced: "高级"
 themes:
   cool: "冷色"
   mono: "单色"

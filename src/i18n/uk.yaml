@@ -40,6 +40,13 @@ layout: "Макет"
 layout_center: "Зображення посередині"
 layout_left: "Текст ліворуч"
 layout_right: "Текст праворуч"
+follows: "Ця історія продовжує: {story}."
+next_story: "Наступна історія: {story}"
+all_levels: "Усі рівні"
+levels:
+  beginner: "Початковий"
+  intermediate: "Середній"
+  advanced: "Поглиблений"
 themes:
   cool: "Холодна"
   mono: "Монохромна"

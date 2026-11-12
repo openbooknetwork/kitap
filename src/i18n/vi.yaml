@@ -40,6 +40,13 @@ layout: "Bố cục"
 layout_center: "Hình ở giữa"
 layout_left: "Văn bản bên trái"
 layout_right: "Văn bản bên phải"
+follows: "Câu chuyện này nối tiếp {story}."
+next_story: "Câu chuyện tiếp theo: {story}"
+all_levels: "Tất cả cấp độ"
+levels:
+  beginner: "Cơ bản"
+  intermediate: "Trung cấp"
+  advanced: "Nâng cao"
 themes:
   cool: "Lạnh"
   mono: "Đơn sắc"

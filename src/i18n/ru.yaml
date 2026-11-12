@@ -40,6 +40,13 @@ layout: "Расположение"
 layout_center: "Картинка посередине"
 layout_left: "Текст слева"
 layout_right: "Текст справа"
+follows: "Эта история продолжает: {story}."
+next_story: "Следующая история: {story}"
+all_levels: "Все уровни"
+levels:
+  beginner: "Начальный"
+  intermediate: "Средний"
+  advanced: "Продвинутый"
 themes:
   cool: "Холодная"
   mono: "Монохромная"

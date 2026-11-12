@@ -40,6 +40,13 @@ layout: "صفحے کی ترتیب"
 layout_center: "تصویر درمیان میں"
 layout_left: "متن بائیں طرف"
 layout_right: "متن دائیں طرف"
+follows: "یہ کہانی {story} کے بعد آتی ہے۔"
+next_story: "اگلی کہانی: {story}"
+all_levels: "تمام سطحیں"
+levels:
+  beginner: "ابتدائی"
+  intermediate: "درمیانی"
+  advanced: "اعلیٰ"
 themes:
   cool: "ٹھنڈا"
   mono: "یک رنگ"

@@ -40,6 +40,13 @@ layout: "Układ"
 layout_center: "Obraz pośrodku"
 layout_left: "Tekst po lewej"
 layout_right: "Tekst po prawej"
+follows: "Ta opowieść jest dalszym ciągiem: {story}."
+next_story: "Następna opowieść: {story}"
+all_levels: "Wszystkie poziomy"
+levels:
+  beginner: "Początkujący"
+  intermediate: "Średnio zaawansowany"
+  advanced: "Zaawansowany"
 themes:
   cool: "Chłodny"
   mono: "Jednobarwny"

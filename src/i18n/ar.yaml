@@ -40,6 +40,13 @@ layout: "التخطيط"
 layout_center: "الصورة في الوسط"
 layout_left: "النص على اليسار"
 layout_right: "النص على اليمين"
+follows: "هذه القصة تتمة لـ {story}."
+next_story: "القصة التالية: {story}"
+all_levels: "كل المستويات"
+levels:
+  beginner: "مبتدئ"
+  intermediate: "متوسط"
+  advanced: "متقدم"
 themes:
   cool: "بارد"
   mono: "أحادي اللون"

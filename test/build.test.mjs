@@ -88,6 +88,29 @@ test('follows in story.yaml chains two stories, and follows.js names each one\'s
   await assert.rejects(make(root), /follows leads back to .* in a circle/);
 });
 
+test('draft: true in story.yaml leaves the story out of a build, and --story builds it', async () => {
+  const root = copy(), second = 'content/second-story/story.yaml', lines = [];
+  fs.cpSync(path.join(root, 'content/first-story'), path.join(root, 'content/second-story'), { recursive: true });
+  edit(root, second, 'id: first-story', 'id: second-story');
+  fs.appendFileSync(path.join(root, second), '\ndraft: true\n');
+  await make(root, { log: l => lines.push(l) });
+  assert.ok(lines.includes('left out the draft second-story'), lines.join('\n'));
+  assert.ok(!fs.existsSync(path.join(root, 'dist/second-story')), 'a draft has no folder in the site');
+  assert.ok(!read(root, 'dist/en/index.html').includes('"id":"second-story"'), 'the main page does not list a draft');
+  await make(root, { story: 'second-story' });
+  assert.ok(fs.existsSync(path.join(root, 'dist/second-story/index.html')), 'a draft builds when the command names it');
+});
+
+test('every language kitap ships has the strings of levels and follows', () => {
+  const dir = fileURLToPath(new URL('../src/i18n/', import.meta.url));
+  for (const file of fs.readdirSync(dir)) {
+    const ui = yaml.load(fs.readFileSync(path.join(dir, file), 'utf8'));
+    for (const key of ['all_levels', 'follows', 'next_story']) assert.ok(ui[key], `${file} has ${key}`);
+    for (const key of ['follows', 'next_story']) assert.ok(ui[key].includes('{story}'), `${file} ${key} names {story}`);
+    assert.deepEqual(Object.keys(ui.levels ?? {}), ['beginner', 'intermediate', 'advanced'], `${file} names the three levels`);
+  }
+});
+
 test('a field the engine does not know fails naming the file and the field, and a flat engine field is lifted under its key', async () => {
   const root = copy();
   edit(root, 'content/first-story/pages/020-two/page.yaml', 'plain: { note: hello }', 'note: hello');

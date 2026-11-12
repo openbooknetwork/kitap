@@ -40,6 +40,13 @@ layout: "레이아웃"
 layout_center: "그림 가운데"
 layout_left: "본문 왼쪽"
 layout_right: "본문 오른쪽"
+follows: "이 이야기는 {story}에 이어집니다."
+next_story: "다음 이야기: {story}"
+all_levels: "모든 수준"
+levels:
+  beginner: "초급"
+  intermediate: "중급"
+  advanced: "고급"
 themes:
   cool: "차가운 색"
   mono: "흑백"

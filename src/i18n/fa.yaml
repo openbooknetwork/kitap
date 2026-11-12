@@ -40,6 +40,13 @@ layout: "چیدمان"
 layout_center: "تصویر در وسط"
 layout_left: "متن در چپ"
 layout_right: "متن در راست"
+follows: "این داستان ادامهٔ {story} است."
+next_story: "داستان بعدی: {story}"
+all_levels: "همهٔ سطح‌ها"
+levels:
+  beginner: "مبتدی"
+  intermediate: "متوسط"
+  advanced: "پیشرفته"
 themes:
   cool: "سرد"
   mono: "تک‌رنگ"

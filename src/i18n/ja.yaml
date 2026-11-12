@@ -40,6 +40,13 @@ layout: "レイアウト"
 layout_center: "画像を中央に"
 layout_left: "本文を左に"
 layout_right: "本文を右に"
+follows: "このストーリーは「{story}」の続きです。"
+next_story: "次のストーリー：{story}"
+all_levels: "すべてのレベル"
+levels:
+  beginner: "初級"
+  intermediate: "中級"
+  advanced: "上級"
 themes:
   cool: "クール"
   mono: "モノクロ"

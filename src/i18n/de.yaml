@@ -40,6 +40,13 @@ layout: "Anordnung"
 layout_center: "Bild in der Mitte"
 layout_left: "Text links"
 layout_right: "Text rechts"
+follows: "Diese Geschichte folgt auf {story}."
+next_story: "Nächste Geschichte: {story}"
+all_levels: "Alle Stufen"
+levels:
+  beginner: "Anfänger"
+  intermediate: "Mittelstufe"
+  advanced: "Fortgeschritten"
 themes:
   cool: "Kühl"
   mono: "Einfarbig"
