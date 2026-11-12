@@ -39,6 +39,8 @@ levels: [beginner, intermediate, advanced]   # optional: each story.yaml names i
 id: the-second-war
 title: The second war
 level: advanced                      # optional: one of the levels site.yaml lists
+cover: the-second-war-map            # optional: an image folder of the story, for its card and its link preview
+cover_dark: the-second-war-map-dark  # optional: the cover a reader on a dark screen sees in its place
 draft: true                          # optional: a build leaves the story out, until --story or --only names it
 follows: the-first-war               # optional: the story before this one. Its last page links to this story, and
                                      # this story's opening names it. One story follows another, so they form chains.

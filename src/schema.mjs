@@ -47,6 +47,7 @@ export const StoryCore = {
   draft: z.boolean().optional(), // a draft is left out of the site, and builds when it is named with --story or --only
   follows: Id.optional(), // the story that comes before this one: that story's last page links to this one
   cover: z.string().regex(/^[a-z0-9][a-z0-9-]*$/, 'the id of an image folder the story can show, kitap image <file> <name> --story <story> makes one').optional(), // the card on the main page
+  cover_dark: z.string().regex(/^[a-z0-9][a-z0-9-]*$/, 'the id of an image folder the story can show, kitap image <file> <name> --story <story> makes one').optional(), // the cover a reader on a dark screen sees
   languages: z.array(Lang).min(1),
   default_language: Lang.optional(),
   theme: Id.optional(),

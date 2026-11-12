@@ -31,7 +31,7 @@ const INDEX = fs.readFileSync(path.join(PKG, 'src', 'index.html'), 'utf8').repla
 // a script's version in its URL, so a browser holding the last release's copy fetches the new one
 const version = text => hash(text).slice(0, 10);
 // the shape of the main page card kept in the cache. A card of another shape counts as no cache.
-const CARD_FORMAT = 8;
+const CARD_FORMAT = 9;
 // Cache files are written whole and renamed into place, so a build running at the same time reads the old file or
 // the new one. A file that is missing or does not parse counts as no cache.
 const readCache = file => { try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return null; } };
@@ -353,6 +353,9 @@ function readContent(p, storyDir, engine, onProblem = null) {
     return pg && (n.scope.decorate?.(pg) ?? pg);
   }).filter(Boolean);
   const coverImage = story.cover ? attempt(storyDir, () => resolveImage(storyScope, story.cover, `${rel(storyFile)} cover`)) ?? null : null;
+  // a second cover for a dark screen stands beside the first, which link previews and light screens show
+  if (story.cover_dark && !story.cover) attempt(storyDir, () => fail(rel(storyFile), 'cover_dark is the cover on a dark screen, add cover for every other screen'));
+  const coverDarkImage = story.cover_dark ? attempt(storyDir, () => resolveImage(storyScope, story.cover_dark, `${rel(storyFile)} cover_dark`)) ?? null : null;
   // the engine's checks over the whole story, the images its items show, and the folders it read catalogues from
   const fin = attempt(storyDir, () => engine.read.finish({ story, pages, texts, images, coverImage }, ctx)) ?? {};
   // a page without a text in a language showed its default language text
@@ -360,7 +363,7 @@ function readContent(p, storyDir, engine, onProblem = null) {
   for (const f of fin.folders ?? []) for (const [lang, ids] of Object.entries(f.fallbacks ?? {})) warnings.push(`${f.kind} "${f.id}" has no ${lang} text on ${ids.join(', ')}, they show the ${f.defaultLang} text`);
   // the bundle and dist/ hold what the pages show: the images of their texts, and the ones the engine's items show
   const shownImages = new Set([...pages.flatMap(pg => langs.flatMap(l => [...(texts[pg.id]?.[l] ?? '').matchAll(/^@image\s+(\S+)\s*$/gm)].map(m => m[1]))),
-    ...(fin.images ?? []), ...(coverImage ? [coverImage] : [])]);
+    ...(fin.images ?? []), ...(coverImage ? [coverImage] : []), ...(coverDarkImage ? [coverDarkImage] : [])]);
   for (const id of Object.keys(images)) if (!shownImages.has(id)) delete images[id];
   // --strict holds each original on this machine to the sha256 its image.yaml records, which names its objects
   const shipped = Object.values(folderImages).filter(f => shownImages.has(f.id));
@@ -374,7 +377,7 @@ function readContent(p, storyDir, engine, onProblem = null) {
     fail(where, `${pages[i].dir} starts ${pages[i].when.from}, before ${prev.dir} which starts ${prev.when.from}; ${moved ? `renumber ${moved} to move it` : 'fix the folder numbers or the when fields'}`);
   });
   return { story, langs, defaultLang, T, entries, translations: report, tree, images, icons, pages, texts, firstImages, warnings: [...warnings, ...(fin.warnings ?? [])], unlinked, fallbacks: storyScope.fallbacks,
-    imageFolders: Object.values(folderImages), shippedImages: shipped, coverImage, engine: E, folders: fin.folders ?? [], state: E, pageTexts };
+    imageFolders: Object.values(folderImages), shippedImages: shipped, coverImage, coverDarkImage, engine: E, folders: fin.folders ?? [], state: E, pageTexts };
 }
 
 // The objects a story links to: its images with their keys and where their originals are, the engine's objects in
@@ -390,7 +393,7 @@ function buildStory(p, storyDir, site, engine) {
   const { log, root } = p;
   const where = p.rel(storyDir);
   const content = readContent(p, storyDir, engine);
-  const { story, langs, defaultLang, T, entries, translations, tree, images, icons, pages, texts, firstImages, warnings, imageFolders, shippedImages, coverImage, folders, fallbacks, pageTexts } = content;
+  const { story, langs, defaultLang, T, entries, translations, tree, images, icons, pages, texts, firstImages, warnings, imageFolders, shippedImages, coverImage, coverDarkImage, folders, fallbacks, pageTexts } = content;
   for (const w of warnings) log(`  warning: ${w}`);
   const ui = uiFor(langs, root, engine);
   const { tr: siteT } = translator({ langs, defaultLang: site.default_language ?? defaultLang, catalogues: loadCatalogues(path.join(root, 'i18n'), langs, p.loadYaml), where: 'i18n', fail });
@@ -419,6 +422,8 @@ function buildStory(p, storyDir, site, engine) {
   // --- the cover on the site index, an image the story can show ---
   const cover = coverImage ? images[coverImage].src : null;
   const coverLinks = coverImage ? shippedImages.find(f => f.id === coverImage).links : null;
+  const coverDark = coverDarkImage ? images[coverDarkImage].src : null;
+  const coverDarkLinks = coverDarkImage ? shippedImages.find(f => f.id === coverDarkImage).links : null;
   // the paths harita 0.4 served each image at, from the site root, to its original: dist/redirects.json
   const redirects = {};
   for (const f of shippedImages) {
@@ -434,7 +439,7 @@ function buildStory(p, storyDir, site, engine) {
 
   // --- bundle and pages ---
   const bundle = {
-    id: story.id, title: T(story.title, 'story.title'), summary, span, cover, languages: langs, defaultLanguage: defaultLang, ui, families, engine: engine.id,
+    id: story.id, title: T(story.title, 'story.title'), summary, span, cover, coverDark, languages: langs, defaultLanguage: defaultLang, ui, families, engine: engine.id,
     site: { title: siteT(site.title, 'site.title'), languages: site.langs, defaultLanguage: site.defaultLang, ask: site.ask ?? [], credit: site.credit !== false,
       source: site.repository ? `${site.repository.replace(/\/$/, '')}/tree/${site.branch}/${where.split(path.sep).join('/')}` : null },
     themes: themeList(site.themes, ui, langs), defaultTheme: story.theme ?? site.theme,
@@ -485,7 +490,7 @@ function buildStory(p, storyDir, site, engine) {
   const folderI18n = Object.fromEntries([...folders.map(f => [f.dir, f]), ...imageFolders.map(f => [f.dir, { kind: 'image', ...f }])]
     .map(([dir, f]) => [dir, { kind: f.kind, id: f.id, defaultLang: f.defaultLang, langs, entries: [...f.translator.entries.values()] }]));
   return { format: CARD_FORMAT, id: story.id, dir: where, level: story.level ?? null, follows: story.follows ?? null, title: bundle.title, summary, span, languages: langs, defaultLanguage: defaultLang, pages: pages.length,
-    cover: coverLinks?.large ?? null, coverOg: coverLinks?.og ?? null, i18n: [...entries.values()], objects, folderI18n, pageTexts, localKeys, redirects, tree: objects.tree };
+    cover: coverLinks?.large ?? null, coverDark: coverDarkLinks?.large ?? null, coverOg: coverLinks?.og ?? null, i18n: [...entries.values()], objects, folderI18n, pageTexts, localKeys, redirects, tree: objects.tree };
 }
 
 // The names of the story folders below content/, in groups too, with each one's folder in p.storyDirs. content/shared/

@@ -103,6 +103,7 @@ select#theme:focus-visible{outline:2px solid var(--accent)}
 .row .detail .open{display:inline-block;margin-top:1rem;background:var(--ink);color:var(--paper);text-decoration:none;padding:.5rem 1rem;border-radius:4px;font-size:1rem}
 .row .detail .open:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .row .cover{aspect-ratio:16/10;background:var(--paper-2);border:1px solid var(--rule);display:grid;place-items:center;overflow:hidden}
+.row .cover picture{display:block;width:100%;height:100%}
 .row .cover img{width:100%;height:100%;object-fit:cover;display:block}
 .credit{font-size:.857rem;color:var(--ink-2);border-top:1px solid var(--rule);padding-top:.714rem}
 .credit a{color:inherit}
@@ -209,7 +210,7 @@ function render(){
           <div class="meta"><span>${num(s.pages, S.ui[lang], lang)} ${esc(plural(S.ui[lang].pages, s.pages, lang))}</span><span>${esc(s.languages.map(l => S.ui[l]?.name ?? l).join(', '))}</span></div>
           <a class="open" href="${storyLink(s.id, storyLang(s))}">${esc(S.ui[lang].open)}</a>
         </div>
-        <div class="cover">${s.cover ? `<img src="${esc(s.cover)}" alt="">` : `<span>${esc(L(s.title))}</span>`}</div>
+        <div class="cover">${s.cover ? `<picture>${s.coverDark ? `<source srcset="${esc(s.coverDark)}" media="(prefers-color-scheme: dark)">` : ''}<img src="${esc(s.cover)}" alt=""></picture>` : `<span>${esc(L(s.title))}</span>`}</div>
       </div>
     </li>`)).join('')).join('');
 }

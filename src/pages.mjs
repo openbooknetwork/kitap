@@ -195,7 +195,7 @@ export function siteFiles({ shell, data: S, image: imageIn = null, site: siteIn,
           <div class="meta"><span>${num(s.pages, T, lang)} ${esc(plural(T.pages, s.pages, lang))}</span><span>${esc(s.languages.map(l => S.ui[l]?.name ?? l).join(', '))}</span></div>
           <a class="open" href="${esc(s.id)}/${storyLang(s, lang)}/">${esc(T.open)}</a>
         </div>
-        <div class="cover">${s.cover ? `<img src="${esc(s.cover)}" alt="">` : `<span>${esc(L(s.title))}</span>`}</div>
+        <div class="cover">${s.cover ? `<picture>${s.coverDark ? `<source srcset="${esc(s.coverDark)}" media="(prefers-color-scheme: dark)">` : ''}<img src="${esc(s.cover)}" alt=""></picture>` : `<span>${esc(L(s.title))}</span>`}</div>
       </div>
     </li>`)).join('')).join('');
     let html = fill(shell, '<html lang="en">', `<html lang="${lang}" dir="${T.dir}">`);

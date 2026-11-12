@@ -111,6 +111,16 @@ test('every language kitap ships has the strings of levels and follows', () => {
   }
 });
 
+test('cover_dark in story.yaml gives the card a second cover for a dark screen', async () => {
+  const root = copy(), story = 'content/first-story/story.yaml', meta = yaml.load(read(root, story));
+  fs.appendFileSync(path.join(root, story), `\ncover_dark: ${meta.cover ?? 'nothing'}\n`);
+  if (!meta.cover) return assert.rejects(make(root), /cover_dark is the cover on a dark screen, add cover/);
+  await make(root);
+  const html = read(root, 'dist/en/index.html');
+  assert.ok(/<picture><source srcset="[^"]+" media="\(prefers-color-scheme: dark\)"><img src="[^"]+" alt=""><\/picture>/.test(html), 'the card holds both covers');
+  assert.ok(bundleOf(root).coverDark, 'the story knows its dark cover');
+});
+
 test('a field the engine does not know fails naming the file and the field, and a flat engine field is lifted under its key', async () => {
   const root = copy();
   edit(root, 'content/first-story/pages/020-two/page.yaml', 'plain: { note: hello }', 'note: hello');
