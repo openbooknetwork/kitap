@@ -145,13 +145,24 @@ one script sets them up from a content project:
 CF_TOKEN=<token> node node_modules/@openbooknetwork/kitap/scripts/cloudflare-book.mjs [--lock]
 ```
 
-It adds the zone and prints its nameservers for the registrar, creates both buckets, attaches the assets domain,
+It adds the zone and prints its nameservers for the registrar, adds the proxied DNS records of the site's name and
+its `www` name, creates both buckets, attaches the assets domain,
 sets CORS, the cache rule, the SVG header rule, tiered cache and https only, and with `--lock` the bucket lock on
 `images/`. Run it again once the zone is active. Then three tokens by hand: an R2 token on the assets bucket for `kitap
 upload`, one on the site bucket as the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` secrets of the deploy
 workflow, and a wrangler token with Workers Scripts Edit and Workers Routes Edit as `CLOUDFLARE_API_TOKEN` with
 the account id as `CLOUDFLARE_ACCOUNT_ID`. `scripts/cloudflare-redirect.mjs <old zone> <new zone>` sends a
 retired domain to the new one.
+
+The Worker's `wrangler.toml` lists a route for each name the site answers on, and a deploy sets the Worker's
+routes to that list:
+
+```toml
+routes = [
+  { pattern = "example.org/*", zone_name = "example.org" },
+  { pattern = "www.example.org/*", zone_name = "example.org" },
+]
+```
 
 `kitap deploy` puts up the files of `dist/` the bucket lacks or holds in another version, and deletes the keys
 `dist/` lacks. Last it writes `kitap-build.json`, the record of the live site: each story's fingerprint, the shared

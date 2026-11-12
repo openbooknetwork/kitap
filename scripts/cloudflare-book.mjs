@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Sets a book up on Cloudflare from its site.yaml: the zone of `url`, the assets bucket with its custom domain and
-// CORS, the site bucket, the cache rule and the SVG header rule on the assets host, tiered cache, and https only.
+// Sets a book up on Cloudflare from its site.yaml: the zone of `url`, the DNS records that bring the site's own
+// name and its www name to Cloudflare, the assets bucket with its custom domain and CORS, the site bucket, the
+// cache rule and the SVG header rule on the assets host, tiered cache, and https only.
 // Every step is skipped when it is already done, so the script can run again after the zone goes active.
 //
 //   CF_TOKEN=<token> node node_modules/@openbooknetwork/kitap/scripts/cloudflare-book.mjs [--lock] [--dry-run]
@@ -29,6 +30,7 @@ if (dry) { console.log('dry run: nothing is sent'); process.exit(0); }
 
 const account = values.account ?? await accountId();
 const zone = await ensureZone();
+await records();
 await ensureBucket(assetsBucket);
 await ensureBucket(siteBucket);
 await cors(assetsBucket);
@@ -51,6 +53,19 @@ async function ensureZone() {
   const z = await call('POST', '/zones', { name: zoneName, account: { id: account }, type: 'full' });
   console.log(`zone ${zoneName}: added, nameservers ${z.name_servers.join(' and ')}`);
   return z;
+}
+
+// The Worker's routes catch only traffic that reaches Cloudflare, so the site's name and its www name each get a
+// proxied record. The address is a placeholder no request reaches, since the Worker answers them all. A name that
+// has a record already keeps it.
+async function records() {
+  const wanted = [{ type: 'A', name: zoneName, content: '192.0.2.1' }, { type: 'CNAME', name: `www.${zoneName}`, content: zoneName }];
+  for (const r of wanted) {
+    const found = await call('GET', `/zones/${zone.id}/dns_records?name=${r.name}`);
+    if (found.length) { console.log(`dns ${r.name}: ${found.map(f => `${f.type} ${f.content}${f.proxied ? '' : ', not proxied'}`).join(', ')}`); continue; }
+    await call('POST', `/zones/${zone.id}/dns_records`, { ...r, proxied: true, ttl: 1 });
+    console.log(`dns ${r.name}: ${r.type} ${r.content}, proxied`);
+  }
 }
 
 async function ensureBucket(name) {
