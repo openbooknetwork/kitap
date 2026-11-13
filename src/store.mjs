@@ -41,23 +41,25 @@ export async function retry(what, request, { wait = 1000 } = {}) {
   }
 }
 
-// Reads objects through the store's public URL, which needs no credentials. count tells the requests made.
+// Reads objects through the store's public URL, which needs no credentials. count tells the requests made, and
+// absent the HTTP status behind each key read as missing.
 export function storeReader(url, opts = {}) {
   const r = {
     count: 0,
+    absent: new Map(),
     // whether the store holds the key: a GET of its first byte, since the store closes the connection after a HEAD
     async has(key) {
       r.count++;
       const res = await retry(url + key, () => fetch(url + key, { headers: { Range: 'bytes=0-0' } }), opts);
       await res.arrayBuffer();
-      if (res.status === 404 || res.status === 403) return false;
+      if (res.status === 404 || res.status === 403) { r.absent.set(key, res.status); return false; }
       if (!res.ok) throw new Error(`${url + key}: HTTP ${res.status}`);
       return true;
     },
     async get(key) {
       r.count++;
       const res = await retry(url + key, () => fetch(url + key, { cache: 'no-store' }), opts);
-      if (res.status === 404 || res.status === 403) return null;
+      if (res.status === 404 || res.status === 403) { r.absent.set(key, res.status); return null; }
       if (!res.ok) throw new Error(`${url + key}: HTTP ${res.status}`);
       return Buffer.from(await res.arrayBuffer());
     },
@@ -112,7 +114,7 @@ export async function missingKeys(reader, tree, { headAll = false } = {}) {
   const meta = `meta/${tree.story}/`;
   if (await reader.get(`${meta}${tree.root}.json`)) return { missing: [], complete: true };
   const latest = await reader.json(`${meta}latest.json`), stored = latest && await reader.json(`${meta}${latest.root}.json`);
-  if (!stored && !headAll) return { missing: null, complete: false };
+  if (!stored && !headAll) return { missing: null, complete: false, asked: latest ? `${meta}${latest.root}.json` : `${meta}latest.json` };
   const known = new Set(), same = new Set();
   for (const [d, x] of Object.entries(stored?.dirs ?? {})) {
     for (const k of x.keys) known.add(k);
@@ -139,15 +141,25 @@ export function describeMissing(tree, missing, describe = null) {
   return [folders.length && `the images of ${folders.join(', ')}`, described].filter(Boolean).join(' and ');
 }
 
+// The HTTP statuses the store gave for the missing keys, with the first key of each: "HTTP 404 for 3 keys, first <key>".
+function answers(reader, missing) {
+  const by = new Map();
+  for (const k of missing) { const s = reader.absent.get(k); by.set(s, [...(by.get(s) ?? []), k]); }
+  return [...by].map(([s, keys]) => `HTTP ${s} for ${keys.length} key${keys.length === 1 ? '' : 's'}, first ${keys[0]}`).join(' and ');
+}
+
 // kitap build --strict: every object the trees name is in the store. Throws with the stories that lack some, named by
 // each tree's dir, the story folder.
 export async function checkStore({ url, trees, log = console.log, describe = null, ...opts }) {
   const reader = storeReader(url, opts), problems = [];
   for (const tree of trees) {
-    const { missing } = await missingKeys(reader, tree);
-    if (missing === null) problems.push(`${tree.dir}: the store holds no upload of this story, kitap upload --story ${tree.story} puts its objects there`);
-    else if (missing.length) problems.push(`${tree.dir}: the store lacks ${describeMissing(tree, missing, describe)}, kitap upload --story ${tree.story} puts them there`);
+    const { missing, asked } = await missingKeys(reader, tree);
+    if (missing === null) problems.push(`${tree.dir}: the store holds no upload of this story, ${url}${asked} answered HTTP ${reader.absent.get(asked)}, kitap upload --story ${tree.story} puts its objects there`);
+    else if (missing.length) problems.push(`${tree.dir}: the store lacks ${describeMissing(tree, missing, describe)}, ${answers(reader, missing)}, kitap upload --story ${tree.story} puts them there`);
   }
+  // a 403 is the store turning this machine away, which an upload does not mend
+  const refused = [...reader.absent.values()].filter(s => s === 403).length;
+  if (problems.length && refused) problems.push(`${url} answered HTTP 403 to ${refused} of ${reader.count} requests: it refuses requests from this machine, so check the store's access rules and run the build again`);
   if (problems.length) throw new Error(problems.join('\n'));
   log(`the store holds every object of ${trees.length} stor${trees.length === 1 ? 'y' : 'ies'} (${reader.count} request${reader.count === 1 ? '' : 's'})`);
 }
