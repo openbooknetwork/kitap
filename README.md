@@ -59,6 +59,10 @@ beden:
 A text is Markdown. `@image <id>` on a line of its own shows an image folder, and `[word](@id)` links a word to
 something the engine shows on the page, a marker on a map or a part of a model.
 [writing/](writing/README.md) has the rules for the English of a story and for its translations, with a file per target language.
+[agents/](agents/) has the instructions of the agents every book shares: `translating.md` for whoever hands out a
+translation, `translator.md` and `translation-reviewer.md` for the two agents that do it. A book's
+`.claude/agents/<name>.md` holds the model and the book's binary and points to the file here, then to the book's own
+`agents/<name>.md` for the rules it adds.
 
 ## Commands
 
