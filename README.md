@@ -66,7 +66,7 @@ something the engine shows on the page, a marker on a map or a part of a model.
 kitap build [--strict] [--local-assets] [--changed] [--only <story>] [--story <id>] [--out <dir>]
 kitap check <story> [page id ...] [--places]
 kitap dev [--story <id>] [--out <dir>] [--port <n>]
-kitap i18n [<lang>] [--story <id>] [--stale | --stamp]
+kitap i18n [<lang>] [--story <id>] [--stale | --stamp | --check]
 kitap image <file or url> <name> --caption <text> [--credit <text>] [--source <url>] [--story <id>]
 kitap image-candidates <story> --queries <file> [--limit <n>] [--pages <id,id>] [--out <name>]
 kitap rehash | kitap upload [--story <id>] [--dry-run] | kitap deploy [--dry-run]
@@ -83,6 +83,11 @@ stamp, each with the new source and the current translation, and what has no tra
 update a story reads that list in place of the story. `--stamp` records the hash of the source behind every
 translated paragraph and string in `i18n/stamps/<lang>.yaml` of the story, of each folder it uses and of the site.
 Run it after a review. Without a language, either flag covers every language from one build.
+
+`kitap i18n <lang> --story <id> --check` compares the story's translation with its source and prints each problem,
+or `ok`. A page's text has the source's `@image` lines, link ids, count of paragraphs and headings, and every four
+digit number of the source in any script's digits. Every key of the story's catalogue and of the catalogues of the
+folders it uses has a value.
 
 `image-candidates` searches Wikimedia Commons for each page of a story and downloads what it finds to
 `<story>/.candidates/<page>/`, listed with author, license and source in `.candidates/index.yaml`. The queries file

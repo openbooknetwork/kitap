@@ -2,7 +2,7 @@
 // own commands read.
 export { build, buildPages, checkStory as check, readStory, storyAssets, uiCatalogue } from './build.mjs';
 export { dev } from './dev.mjs';
-export { i18n } from './translate.mjs';
+export { i18n, checkTranslation } from './translate.mjs';
 export { image, imageIndex, findImage, rehash } from './image.mjs';
 export { imageCandidates } from './candidates.mjs';
 export { upload } from './upload.mjs';

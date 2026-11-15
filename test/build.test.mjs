@@ -6,7 +6,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { build, check, i18n, loadEngine } from '../src/index.mjs';
+import { build, check, checkTranslation, i18n, loadEngine } from '../src/index.mjs';
 import plain from './engines/plain.mjs';
 import yaml from 'js-yaml';
 
@@ -156,6 +156,30 @@ test('i18n writes the story catalogue with the engine\'s labels and the site cat
   assert.ok(written.some(f => f.endsWith('content/first-story/i18n/tr.yaml')));
   const cat = read(root, 'content/first-story/i18n/tr.yaml');
   assert.ok(cat.includes('pages.one.title: ""') && cat.includes('story.title: ""'));
+});
+
+test('i18n --check compares a story\'s translation with its source, page by page and key by key', async () => {
+  const root = copy();
+  edit(root, 'content/first-story/story.yaml', 'languages: [en]', 'languages: [en, tr]');
+  const one = 'content/first-story/pages/010-one/text/', two = 'content/first-story/pages/020-two/text/', cat = 'content/first-story/i18n/tr.yaml';
+  const o = { root, lang: 'tr', story: 'first-story', engine: plain };
+  fs.writeFileSync(path.join(root, two, 'en.md'), '## In 1453\n\nThe city fell in 1453, with 80,000 men.\n');
+  fs.copyFileSync(path.join(root, one, 'en.md'), path.join(root, one, 'tr.md'));
+  i18n({ ...o, log: quiet });
+  const keys = Object.keys(yaml.load(read(root, cat)));
+  assert.deepEqual(checkTranslation(o), ['pages/020-two: no text/tr.md', `${cat}: ${keys.length} empty, ${keys.slice(0, 5).join(', ')}${keys.length > 5 ? ', ...' : ''}`]);
+  fs.writeFileSync(path.join(root, cat), yaml.dump(Object.fromEntries(keys.map(k => [k, `tr ${k}`]))));
+  fs.writeFileSync(path.join(root, two, 'tr.md'), 'Şehir düştü.\n\n80.000 asker.\n\nÜçüncü paragraf.\n');
+  assert.deepEqual(checkTranslation(o), [
+    'pages/020-two: 3 paragraphs, the en text has 2',
+    'pages/020-two: 0 headings, the en text has 1',
+    'pages/020-two: 1453 of the en text does not appear',
+  ]);
+  // the year counts in any script's digits
+  fs.writeFileSync(path.join(root, two, 'tr.md'), '## ١٤٥٣\n\nŞehir düştü.\n');
+  assert.deepEqual(checkTranslation(o), []);
+  await assert.rejects(async () => checkTranslation({ ...o, lang: 'de' }), /add de to languages in story.yaml/);
+  await assert.rejects(async () => checkTranslation({ ...o, lang: 'en' }), /default language/);
 });
 
 test('i18n --stale lists what changed since --stamp, by block and by key', async () => {

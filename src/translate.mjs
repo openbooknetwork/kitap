@@ -1,5 +1,6 @@
-// kitap i18n [<lang>] [--story id] [--stale | --stamp]: builds quietly to collect every string, then writes the <lang>.yaml
-// catalogues of each story, folder and the site. --stale adds a work list per story, --stamp writes the stamps instead.
+// kitap i18n [<lang>] [--story id] [--stale | --stamp | --check]: builds quietly to collect every string, then writes
+// the <lang>.yaml catalogues of each story, folder and the site. --stale adds a work list per story, --stamp writes the
+// stamps instead, --check compares one story's translation with its source and writes nothing.
 // Without a language, --stale and --stamp cover every language of the stories and the site from the one build.
 import fs from 'fs';
 import os from 'os';
@@ -7,19 +8,22 @@ import path from 'path';
 import yaml from 'js-yaml';
 import { buildPages, uiCatalogue } from './build.mjs';
 import { flatten, catalogueText } from './i18n.mjs';
-import { stalePage, staleStrings, stampsOf, stampsFile, readStamps, writeStamps, writeStale } from './stamps.mjs';
+import { blocksOf, stalePage, staleStrings, stampsOf, stampsFile, readStamps, writeStamps, writeStale } from './stamps.mjs';
 import { plural } from './util.mjs';
+
+const existingOf = file => fs.existsSync(file) ? flatten(yaml.load(fs.readFileSync(file, 'utf8')) ?? {}) : {};
+// one story builds alone into a folder thrown away after, so a half edited story elsewhere does not stop it
+function collect({ root, story, engine }) {
+  const out = story && fs.mkdtempSync(path.join(os.tmpdir(), 'kitap-i18n-'));
+  try { return buildPages({ root, log: () => {}, story, out, localAssets: true, engine }); } finally { if (out) fs.rmSync(out, { recursive: true, force: true }); }
+}
 
 export function i18n({ root = process.cwd(), lang: given, story, log = console.log, engine = null, stale = false, stamp = false } = {}) {
   if (!given && !stale && !stamp) throw new Error('usage: kitap i18n <lang> [--story id] [--stale | --stamp], or without the language for every one with --stale or --stamp');
   if (stale && stamp) throw new Error('kitap i18n takes --stale or --stamp, one of them');
-  // one story builds alone into a folder thrown away after, so a half edited story elsewhere does not stop it
-  const out = story && fs.mkdtempSync(path.join(os.tmpdir(), 'kitap-i18n-'));
-  let r;
-  try { r = buildPages({ root, log: () => {}, story, out, localAssets: true, engine }); } finally { if (out) fs.rmSync(out, { recursive: true, force: true }); }
+  const r = collect({ root, story, engine });
   const written = [];
   const rel = f => path.relative(root, f).split(path.sep).join('/');
-  const existingOf = file => fs.existsSync(file) ? flatten(yaml.load(fs.readFileSync(file, 'utf8')) ?? {}) : {};
   const stories = Object.values(r.i18n.stories);
   // every language some story or the site is translated into, when none is given
   const langs = given ? [given] : [...new Set([...stories.flatMap(s => s.langs.filter(l => l !== s.defaultLang)), ...(story ? [] : r.i18n.siteLangs.filter(l => l !== r.i18n.siteLang))])];
@@ -105,4 +109,48 @@ export function i18n({ root = process.cwd(), lang: given, story, log = console.l
   };
   for (const lang of langs) forLang(lang);
   return written;
+}
+
+// the digits of every script the writing rules use, read as 0-9: Arabic-Indic, Persian, Devanagari, Bengali, Thai, full width
+const ZEROS = [0x660, 0x6f0, 0x966, 0x9e6, 0xe50, 0xff10];
+const asciiDigits = s => s.replace(/\p{Nd}/gu, c => { const cp = c.codePointAt(0), z = ZEROS.find(z => cp >= z && cp <= z + 9); return z == null ? c : String(cp - z); });
+const shapeOf = md => ({
+  images: [...md.matchAll(/^@image\s+(\S+)/gm)].map(m => m[1]),
+  links: [...md.matchAll(/\]\(@([^)\s]+)\)/g)].map(m => m[1]).sort(),
+  paragraphs: blocksOf(md).filter(b => !/^@image\s/.test(b)).length,
+  headings: (md.match(/^#{1,6}\s/gm) ?? []).length,
+});
+// a four digit number standing alone, so 250,000 and 1.5 are not read as years
+const years = md => [...new Set([...asciiDigits(md).matchAll(/(?<![\d.,])\d{4}(?![\d]|[.,]\d)/g)].map(m => m[0]))];
+
+// kitap i18n <lang> --story <id> --check: the problems of one story's translation, as far as code can tell. Per page:
+// the text exists, its @image lines and link ids match the source, it has as many paragraphs and headings, and every
+// four digit number of the source appears in it. Per catalogue of the story and of the folders it uses: no empty value.
+export function checkTranslation({ root = process.cwd(), lang, story, engine = null } = {}) {
+  if (!lang || !story) throw new Error('usage: kitap i18n <lang> --story <id> --check');
+  const r = collect({ root, story, engine }), s = r.i18n.stories[story], src = s.defaultLang;
+  if (lang === src) throw new Error(`${story}: ${lang} is the story's default language, name a language it is translated into`);
+  if (!s.langs.includes(lang)) throw new Error(`${story}: add ${lang} to languages in story.yaml, then run the check again`);
+  const problems = [], list = ids => ids.join(', ') || 'none';
+  const posix = f => f.split(path.sep).join('/');
+  for (const p of Object.values(s.pages)) {
+    const source = p.texts[src], text = p.texts[lang], where = posix(path.relative(s.dir, p.dir));
+    if (source == null) continue;
+    if (text == null) { problems.push(`${where}: no text/${lang}.md`); continue; }
+    const a = shapeOf(source), b = shapeOf(text);
+    if (a.images.join() !== b.images.join()) problems.push(`${where}: @image lines ${list(b.images)}, the ${src} text has ${list(a.images)}`);
+    if (a.links.join() !== b.links.join()) problems.push(`${where}: link ids ${list(b.links)}, the ${src} text has ${list(a.links)}`);
+    if (a.paragraphs !== b.paragraphs) problems.push(`${where}: ${plural(b.paragraphs, 'paragraph')}, the ${src} text has ${a.paragraphs}`);
+    if (a.headings !== b.headings) problems.push(`${where}: ${plural(b.headings, 'heading')}, the ${src} text has ${a.headings}`);
+    const got = new Set(years(text)), lost = years(source).filter(y => !got.has(y));
+    if (lost.length) problems.push(`${where}: ${lost.join(', ')} of the ${src} text ${lost.length === 1 ? 'does' : 'do'} not appear`);
+  }
+  const catalogue = (dir, entries) => {
+    const file = path.join(root, dir, 'i18n', lang + '.yaml'), existing = existingOf(file);
+    const empty = entries.filter(e => !e.shared && !(e.inline?.[lang] ?? existing[e.key])).map(e => e.key);
+    if (empty.length) problems.push(`${posix(path.relative(root, file))}: ${empty.length} empty, ${empty.slice(0, 5).join(', ')}${empty.length > 5 ? ', ...' : ''}`);
+  };
+  catalogue(s.dir, s.entries);
+  for (const d of s.folders) { const f = r.i18n.folders[d]; if (f && lang !== f.defaultLang && f.langs.includes(lang)) catalogue(d, f.entries); }
+  return problems;
 }
