@@ -4,6 +4,7 @@
 // one entry per language keeps working and takes precedence for the languages it names.
 import fs from 'fs';
 import path from 'path';
+import yaml from 'js-yaml';
 
 // { a: { b: 'x' } } -> { 'a.b': 'x' }, so a catalogue may nest or stay flat
 export function flatten(obj, prefix = '', out = {}) {
@@ -21,8 +22,9 @@ export function unflatten(flat) {
   return out;
 }
 
-// Reads <dir>/<lang>.yaml for every language that has one.
-export function loadCatalogues(dir, langs, loadYaml) {
+// Reads <dir>/<lang>.yaml for every language that has one. The build hands its own loadYaml, which names the file
+// in an error. An engine reading its own strings leaves it out.
+export function loadCatalogues(dir, langs, loadYaml = file => yaml.load(fs.readFileSync(file, 'utf8')) ?? {}) {
   const cats = {};
   for (const lang of langs) { const f = path.join(dir, lang + '.yaml'); if (fs.existsSync(f)) cats[lang] = flatten(loadYaml(f)); }
   return cats;

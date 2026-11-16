@@ -5,6 +5,7 @@ export { dev } from './dev.mjs';
 export { i18n, checkTranslation } from './translate.mjs';
 export { image, imageIndex, findImage, rehash } from './image.mjs';
 export { imageCandidates } from './candidates.mjs';
+export { sources } from './sources.mjs';
 export { upload } from './upload.mjs';
 export { deploy } from './deploy.mjs';
 export { resolve } from './routes.mjs';

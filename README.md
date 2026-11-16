@@ -73,6 +73,7 @@ kitap dev [--story <id>] [--out <dir>] [--port <n>]
 kitap i18n [<lang>] [--story <id>] [--stale | --stamp | --check]
 kitap image <file or url> <name> --caption <text> [--credit <text>] [--source <url>] [--story <id>]
 kitap image-candidates <story> --queries <file> [--limit <n>] [--pages <id,id>] [--out <name>]
+kitap sources <story>
 kitap rehash | kitap upload [--story <id>] [--dry-run] | kitap deploy [--dry-run]
 ```
 
@@ -97,6 +98,12 @@ folders it uses has a value.
 `<story>/.candidates/<page>/`, listed with author, license and source in `.candidates/index.yaml`. The queries file
 is keyed by story, then page: `{ queries: [search terms], articles: [Wikipedia titles or URLs], files: [Commons
 files] }`. A file the book holds already is listed with `held: <id>`. `kitap image <url>` adds a chosen one.
+
+`sources` downloads the reading a story is written from. Each `<name>.urls` file of the story folder lists URLs, one
+per line with `#` for comments, and its files go to `.<name>/` beside it: `references.urls` fills `.references/`. A
+Wikipedia article is saved as `<Title>.wiki`, its wikitext, and `<Title>.infobox.txt`. A PDF is saved as it is, with
+a `.txt` beside it where `pdftotext` is installed (`brew install poppler`). Any other page is saved as its text. A
+file that is there is kept, so a page saved from a browser under the name the command prints counts as fetched.
 
 ## An engine
 
