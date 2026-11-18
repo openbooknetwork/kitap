@@ -241,3 +241,20 @@ test('i18n --stale lists what changed since --stamp, by block and by key', async
   assert.equal(lines.at(-1), 'first-story tr: up to date');
   await assert.rejects(async () => i18n({ ...o, lang: undefined }), /usage: kitap i18n/);
 });
+
+test('kitap check runs the checks of plugins/checks after its own, with the pages the command names marked', () => {
+  const root = copy(), dir = path.join(root, 'plugins', 'checks');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'words.mjs'), "import fs from 'fs';\nimport path from 'path';\nexport default ({ pages, rel }) => pages.filter(p => p.checked && fs.existsSync(path.join(p.dir, 'page.yaml'))).map(p => `${rel(p.dir)} is read`);\n");
+  const all = check({ root, story: 'first-story', engine: plain });
+  assert.equal(all.length, 2);
+  assert.match(all[0], /^words: content\/first-story\/pages\/.* is read$/);
+  assert.equal(check({ root, story: 'first-story', pages: ['one'], engine: plain }).length, 1);
+  fs.writeFileSync(path.join(dir, 'advice.mjs'), "export default ({ note }) => { note('weigh this'); return []; };\n");
+  const lines = [];
+  assert.equal(check({ root, story: 'first-story', engine: plain, log: l => lines.push(l) }).length, 2, 'a note is no problem');
+  assert.ok(lines.includes('advice: note: weigh this'));
+  fs.rmSync(path.join(dir, 'advice.mjs'));
+  fs.writeFileSync(path.join(dir, 'broken.mjs'), 'export const x = 1;\n');
+  assert.match(check({ root, story: 'first-story', engine: plain })[0], /plugins\/checks\/broken\.mjs:? ?.*a check exports a function as its default/s);
+});

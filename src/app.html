@@ -353,7 +353,8 @@ aside.story .extra{display:none}
   /* the chronology gives way to one line: where in the story you are, and a button for the full contents */
   .where{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:0 .857rem;align-items:center;padding-bottom:.429rem;border-bottom:1px solid var(--rule)}
   .where .crumbs{grid-column:1;font-size:.786rem;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .where .here{grid-column:1;font-weight:600;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* a long page title takes a second line before it is cut */
+  .where .here{grid-column:1;font-weight:600;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}
   .where .here small{font-weight:400;color:var(--ink-2);margin-inline-end:.429rem;font-variant-numeric:tabular-nums}
   .where button{grid-column:2;grid-row:1/3;min-height:max(40px,2.857rem);background:var(--panel);color:var(--ink);border:1px solid var(--rule);border-radius:6px;padding:0 .857rem;font:inherit;font-variant-numeric:tabular-nums;cursor:pointer;display:inline-flex;align-items:center;gap:.429rem}
   .where button svg{width:1.143rem;height:1.143rem}

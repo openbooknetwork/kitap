@@ -564,8 +564,22 @@ export function readStory({ root = process.cwd(), story, engine = null, log = ()
   return readContent(p, p.storyDirs.get(story), e);
 }
 
+// The book's own checks: each plugins/checks/<name>.mjs exports a function as its default, which kitap check calls
+// with { root, story, dir, pages: [{ id, dir, checked }], rel, loadYaml, note } and which returns its problems as lines.
+// note(line) prints a line for a person to weigh, which is no problem and leaves the check ok. They run in the order of their names.
+function bookChecks(root) {
+  const dir = path.join(root, 'plugins', 'checks');
+  if (!exists(dir)) return [];
+  return fs.readdirSync(dir).filter(f => f.endsWith('.mjs')).sort().map(f => {
+    const run = require(path.join(dir, f)).default;
+    if (typeof run !== 'function') fail(`plugins/checks/${f}`, 'a check exports a function as its default, which takes the story and returns its problems');
+    return [f.slice(0, -4), run];
+  });
+}
+
 // Every problem in one story's content: the pages, their texts and the files they use, the engine's included. pages
-// limits the check to those page ids and to the files outside any page. Returns the problems, [] when there are none.
+// limits the check to those page ids and to the files outside any page. The checks of plugins/checks/ run after
+// kitap's own. Returns the problems, [] when there are none.
 // places lists, per text file, the names the page's items carry that the text writes without a link
 export function checkStory({ root = process.cwd(), story, pages = [], places = false, log = console.log, engine = null } = {}) {
   const p = project(root, log);
@@ -580,9 +594,12 @@ export function checkStory({ root = process.cwd(), story, pages = [], places = f
     const { tree, unlinked, fallbacks } = readContent(p, storyDir, e, (dir, msg, pageId) => { if (inScope(pageId)) problems.push(msg); });
     for (const [lang, ids] of Object.entries(fallbacks)) { const n = ids.filter(inScope).length; if (n) log(`${lang}: ${n} pages without text/${lang}.md show the default language text`); }
     if (places) for (const u of unlinked) if (inScope(u.pageId)) log(`${u.file}: ${u.names.join(', ')}`);
-    const ids = new Set(), collect = nodes => { for (const n of nodes) n.type === 'page' ? ids.add(n.id) : collect(n.children); };
+    const dirs = new Map(), collect = nodes => { for (const n of nodes) n.type === 'page' ? dirs.set(n.id, n.dir) : collect(n.children); };
     collect(tree);
-    for (const id of pages) if (!ids.has(id)) problems.push(`${p.rel(storyDir)}/pages: no page "${id}"`);
+    for (const id of pages) if (!dirs.has(id)) problems.push(`${p.rel(storyDir)}/pages: no page "${id}"`);
+    // checked marks the pages the command names, every page when it names none
+    const list = [...dirs].map(([id, dir]) => ({ id, dir, checked: inScope(id) }));
+    for (const [name, run] of bookChecks(root)) problems.push(...(run({ root, story, dir: storyDir, pages: list, rel: p.rel, loadYaml: p.loadYaml, note: m => log(`${name}: note: ${m}`) }) ?? []).map(m => `${name}: ${m}`));
   } catch (err) { problems.push(err.message); } // story.yaml itself or an empty pages/ stops the reading
   return problems;
 }

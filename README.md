@@ -94,6 +94,20 @@ or `ok`. A page's text has the source's `@image` lines, link ids, count of parag
 digit number of the source in any script's digits. Every key of the story's catalogue and of the catalogues of the
 folders it uses has a value.
 
+`check` then runs the book's own checks. Each `plugins/checks/<name>.mjs` of the book exports a function as its
+default, and `check` calls them in the order of their names and prints each line a function returns as a problem,
+under the check's name:
+
+```js
+// plugins/checks/words.mjs
+export default ({ root, story, dir, pages, rel, loadYaml, note }) => []; // the problems, one line each
+```
+
+`dir` is the story's folder and `pages` lists its pages as `{ id, dir, checked }`. `checked` is true for the pages
+the command names, and for every page when it names none. `rel(file)` gives a path from the book's root, and `loadYaml(file)` reads a yaml file.
+`note(line)` prints a line for a person to weigh: it is printed under the check's name as a note, and the check
+still ends `ok`.
+
 `image-candidates` searches Wikimedia Commons for each page of a story and downloads what it finds to
 `<story>/.candidates/<page>/`, listed with author, license and source in `.candidates/index.yaml`. The queries file
 is keyed by story, then page: `{ queries: [search terms], articles: [Wikipedia titles or URLs], files: [Commons
