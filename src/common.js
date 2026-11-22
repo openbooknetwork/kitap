@@ -53,6 +53,11 @@ const REPO = '/*__REPO__*/';
 const credit = ui => ui.generated_by.replace('{kitap}', `<a href="${REPO}" target="_blank" rel="noopener">kitap</a>`);
 
 const applyPalette = id => { document.documentElement.dataset.palette = id; savePref('palette', id); };
+// Light or dark: auto follows the device, light and dark hold whatever the device says.
+const MODES = ['auto', 'light', 'dark'];
+const setModeAttr = m => { if (m === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = m; };
+const applyMode = m => { setModeAttr(m); savePref('mode', m); };
+const modeItems = ui => MODES.map(m => ({ value: m, text: ui['mode_' + m] }));
 
 // The story page layouts on wide screens: the picture in the middle, or the contents and the text together at one side.
 // Every page offers the choice in its settings, and story pages apply it.

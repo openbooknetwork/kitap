@@ -130,6 +130,7 @@ html:lang(ko){word-break:keep-all}
         <div class="settings" id="settings" hidden>
           <div class="group layout-group"><span id="layout-label"></span><div class="layouts" id="layouts" role="radiogroup"></div></div>
           <label class="group"><span id="theme-label"></span><select id="theme"></select></label>
+          <label class="group"><span id="mode-label"></span><select id="mode"></select></label>
           <a class="src-link" id="contribute-menu" target="_blank" rel="noopener" hidden></a>
           <a class="src-link" id="network-menu" href="https://openbooknetwork.org/" target="_blank" rel="noopener"></a>
         </div>
@@ -152,6 +153,8 @@ let lang = ROUTE?.lang ?? preferredLang(S.languages, S.defaultLanguage);
 const storyLang = s => s.languages.includes(lang) ? lang : s.defaultLanguage;
 let palette = pref('palette', S.themes.map(t => t.id), S.defaultTheme);
 document.documentElement.dataset.palette = palette;
+let mode = pref('mode', MODES, 'auto');
+setModeAttr(mode);
 const L = field => pick(field, lang, S.defaultLanguage);
 const open = new Set();
 // search: a case insensitive substring of the title in the current language, folded by that language's rules
@@ -177,9 +180,10 @@ function render(){
   fillSelect($('lang'), S.languages.map(l => ({ value: l, text: S.ui[l].name ?? l })), lang, S.ui[lang].language);
   $('lang-icon').innerHTML = S.icons.languages; $('lang-code').textContent = lang.toUpperCase(); $('langpick').title = S.ui[lang].language; $('langpick').hidden = S.languages.length < 2;
   fillSelect($('theme'), S.themes.map(t => ({ value: t.id, text: pick(t.name, lang, S.defaultLanguage, t.id) })), palette, S.ui[lang].theme);
+  fillSelect($('mode'), modeItems(S.ui[lang]), mode, S.ui[lang].mode);
   $('settings-btn').innerHTML = `${S.icons.settings}<span>${esc(S.ui[lang].settings)}</span>`; $('settings-btn').setAttribute('aria-label', S.ui[lang].settings);
   $('settings').setAttribute('aria-label', S.ui[lang].settings);
-  $('theme-label').textContent = S.ui[lang].theme;
+  $('theme-label').textContent = S.ui[lang].theme; $('mode-label').textContent = S.ui[lang].mode;
   $('layout-label').textContent = S.ui[lang].layout; $('layouts').setAttribute('aria-label', S.ui[lang].layout);
   $('layouts').innerHTML = layoutButtons(S.ui[lang], pref('layout', LAYOUTS, 'center'));
   $('search').placeholder = S.ui[lang].search_stories; $('search').setAttribute('aria-label', S.ui[lang].search_stories);
@@ -210,7 +214,7 @@ function render(){
           <div class="meta"><span>${num(s.pages, S.ui[lang], lang)} ${esc(plural(S.ui[lang].pages, s.pages, lang))}</span><span>${esc(s.languages.map(l => S.ui[l]?.name ?? l).join(', '))}</span></div>
           <a class="open" href="${storyLink(s.id, storyLang(s))}">${esc(S.ui[lang].open)}</a>
         </div>
-        <div class="cover">${s.cover ? `<picture>${s.coverDark ? `<source srcset="${esc(s.coverDark)}" media="(prefers-color-scheme: dark)">` : ''}<img src="${esc(s.cover)}" alt=""></picture>` : `<span>${esc(L(s.title))}</span>`}</div>
+        <div class="cover">${s.cover ? `<picture>${s.coverDark && mode === 'auto' ? `<source srcset="${esc(s.coverDark)}" media="(prefers-color-scheme: dark)">` : ''}<img src="${esc(mode === 'dark' && s.coverDark ? s.coverDark : s.cover)}" alt=""></picture>` : `<span>${esc(L(s.title))}</span>`}</div>
       </div>
     </li>`)).join('')).join('');
 }
@@ -228,6 +232,7 @@ $('toggle-all').onclick = () => { const all = allOpen(); visible().forEach(s => 
 $('search').oninput = e => { query = e.target.value; render(); };
 $('search').onkeydown = e => { if (e.key === 'Escape' && query) { e.target.value = query = ''; render(); } };
 $('theme').onchange = e => { palette = e.target.value; applyPalette(palette); };
+$('mode').onchange = e => { mode = e.target.value; applyMode(mode); render(); };
 const showSettings = open => { $('settings').hidden = !open; $('settings-btn').setAttribute('aria-expanded', open); };
 $('settings-btn').onclick = () => showSettings($('settings').hidden);
 $('layouts').onclick = e => { const b = e.target.closest('button[data-layout]'); if (b) saveLayout(b.dataset.layout); };

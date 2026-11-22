@@ -10,6 +10,10 @@ hint: Step through with the arrows.
 pages: pages
 open: Open
 theme: Theme
+mode: Light or dark
+mode_auto: As the device
+mode_light: Light
+mode_dark: Dark
 expand_all: Expand all
 source: Source
 legend: Legend
