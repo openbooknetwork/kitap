@@ -173,11 +173,14 @@ const IMAGE_FILE = /\.(jpe?g|png|webp|gif|svg)$/i;
 const LAND_SLOTS = 8;
 // CSS for every theme: tokens on :root[data-palette=id], light and dark; the default theme also on bare :root
 function themeCss(themes, defaultId) {
-  const TOKEN = { paper: '--paper', paper2: '--paper-2', sea: '--sea', ink: '--ink', ink2: '--ink-2', rule: '--rule', accent: '--accent', panel: '--panel', route: '--route', border: '--border' };
+  const TOKEN = { paper: '--paper', paper2: '--paper-2', sea: '--sea', ink: '--ink', ink2: '--ink-2', rule: '--rule', accent: '--accent', panel: '--panel', route: '--route', border: '--border',
+    red: '--red', blue: '--blue', green: '--green', gold: '--gold', on_accent: '--on-accent' };
+  // every block declares every hue, so a theme without them never inherits the default theme's
+  const filled = set => ({ red: set.accent, blue: set.accent, green: set.accent, gold: set.accent, on_accent: set.paper, ...set });
   const lum = hex => { const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
   // eight land slots always, filled up from paper2, so a theme without tints paints one colour and never inherits another theme's
   const land = set => [...Array(LAND_SLOTS)].map((_, i) => `--land-${i}:${set.land?.[i % set.land.length] ?? set.paper2};`).join('');
-  const decl = set => Object.entries(set).filter(([k]) => TOKEN[k]).map(([k, v]) => `${TOKEN[k]}:${v};`).join('') + land(set) + (lum(set.paper) < 0.5 ? 'color-scheme:dark;' : 'color-scheme:light;');
+  const decl = set => Object.entries(filled(set)).filter(([k]) => TOKEN[k]).map(([k, v]) => `${TOKEN[k]}:${v};`).join('') + land(set) + (lum(set.paper) < 0.5 ? 'color-scheme:dark;' : 'color-scheme:light;');
   const block = (sel, t) => `${sel}{${decl(t.light)}}@media (prefers-color-scheme: dark){${sel}:not([data-theme="light"]){${decl(t.dark)}}}${sel}[data-theme="dark"]{${decl(t.dark)}}`;
   return block(':root', themes[defaultId]) + Object.entries(themes).map(([id, t]) => block(`:root[data-palette="${id}"]`, t)).join('');
 }

@@ -52,6 +52,17 @@ test('credit: false in site.yaml leaves the kitap note out of the story and the 
   assert.ok(read(root, 'dist/en/index.html').includes('"credit":false'));
 });
 
+test('every theme names red, blue, green, gold and on-accent, from accent and paper where a theme leaves them out', async () => {
+  const root = copy();
+  const plainSet = '{ paper: "#ffffff", paper2: "#eeeeee", sea: "#dddddd", ink: "#111111", ink2: "#555555", rule: "#cccccc", accent: "#aa0000", panel: "#fafafa", route: "#555555", border: "#777777" }';
+  fs.appendFileSync(path.join(root, 'site.yaml'), `\nthemes:\n  bare: { light: ${plainSet}, dark: ${plainSet} }\n`);
+  await make(root);
+  const html = read(root, 'dist/first-story/en/one/index.html');
+  assert.ok(html.includes('--red:#d1453b;--blue:#2a6bd1;--green:#2e8540;--gold:#b07a12;--on-accent:#f7f7f5;'), 'the cool theme gives its own hues');
+  const bare = html.slice(html.indexOf(':root[data-palette="bare"]{'));
+  assert.ok(bare.includes('--red:#aa0000;--blue:#aa0000;--green:#aa0000;--gold:#aa0000;--on-accent:#ffffff;'), 'a theme without hues draws in its accent');
+});
+
 test('levels in site.yaml give every story a level and group the main page by level, each level by title', async () => {
   const root = copy(), story = 'content/first-story/story.yaml';
   fs.appendFileSync(path.join(root, 'site.yaml'), '\nlevels: [beginner, advanced]\n');

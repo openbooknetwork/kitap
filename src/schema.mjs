@@ -12,8 +12,10 @@ export const Hex = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'a hex colour like #a06
 export const When = z.union([z.number().int(), z.string(), z.date()]).transform(v => v instanceof Date ? v.toISOString().slice(0, 10) : String(v))
   .refine(s => /^\d{4}(-\d{2})?(-\d{2})?$/.test(s), 'YYYY, YYYY-MM or YYYY-MM-DD');
 
-// land: up to eight tints an engine may use for areas, neighbours get different ones; without it every area is paper2
-const ThemeTokens = z.object({ paper: Hex, paper2: Hex, sea: Hex, ink: Hex, ink2: Hex, rule: Hex, accent: Hex, panel: Hex, route: Hex, border: Hex, land: z.array(Hex).min(2).max(8).optional() }).strict();
+// land: up to eight tints an engine may use for areas, neighbours get different ones; without it every area is paper2.
+// red, blue, green and gold tell the parts of a figure apart, accent without them; on_accent is text on accent, paper without it.
+const ThemeTokens = z.object({ paper: Hex, paper2: Hex, sea: Hex, ink: Hex, ink2: Hex, rule: Hex, accent: Hex, panel: Hex, route: Hex, border: Hex,
+  red: Hex.optional(), blue: Hex.optional(), green: Hex.optional(), gold: Hex.optional(), on_accent: Hex.optional(), land: z.array(Hex).min(2).max(8).optional() }).strict();
 export const Theme = z.object({ name: Translatable.optional(), light: ThemeTokens, dark: ThemeTokens }).strict();
 export const Themes = z.record(Id, Theme);
 
