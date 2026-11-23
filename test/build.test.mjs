@@ -112,6 +112,15 @@ test('draft: true in story.yaml leaves the story out of a build, and --story bui
   assert.ok(fs.existsSync(path.join(root, 'dist/second-story/index.html')), 'a draft builds when the command names it');
 });
 
+test('every language kitap ships has every interface string of the English', () => {
+  const dir = fileURLToPath(new URL('../src/i18n/', import.meta.url));
+  const en = Object.keys(yaml.load(fs.readFileSync(path.join(dir, 'en.yaml'), 'utf8')));
+  for (const file of fs.readdirSync(dir)) {
+    const ui = yaml.load(fs.readFileSync(path.join(dir, file), 'utf8'));
+    assert.deepEqual(en.filter(key => !(key in ui)), [], `${file} lacks strings a strict build asks every language for`);
+  }
+});
+
 test('every language kitap ships has the strings of levels and follows', () => {
   const dir = fileURLToPath(new URL('../src/i18n/', import.meta.url));
   for (const file of fs.readdirSync(dir)) {

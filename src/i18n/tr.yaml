@@ -10,6 +10,10 @@ hint: Oklarla adım adım ilerleyin.
 pages: sayfa
 open: Aç
 theme: Tema
+mode: Açık ya da koyu
+mode_auto: Cihaza göre
+mode_light: Açık
+mode_dark: Koyu
 expand_all: Tümünü aç
 source: Kaynak
 collapse_all: Tümünü kapat
