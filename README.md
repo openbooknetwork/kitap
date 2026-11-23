@@ -50,6 +50,10 @@ follows: the-first-war               # optional: the story before this one. Its 
 # page.yaml: the book's fields, then the engine's under its key
 title: "The aorta"
 date: "1628"                       # optional, shown above the title and in the contents
+when: 1628-03                      # optional, for the order check: a year, a year-month or a full date, alone or
+                                   # as { from, to }. A page that starts before the dated page ahead of it fails
+                                   # the build. A year BC takes a minus as historians count it: -0335-03 is
+                                   # March 335 BC
 sources: ["Gray's Anatomy, ch. 58."]
 beden:
   look: aorta
@@ -67,7 +71,7 @@ translation, `translator.md` and `translation-reviewer.md` for the two agents th
 ## Commands
 
 ```
-kitap build [--strict] [--local-assets] [--changed] [--only <story>] [--story <id>] [--out <dir>]
+kitap build [--strict [--no-store]] [--local-assets] [--changed] [--only <story>] [--story <id>] [--out <dir>]
 kitap check <story> [page id ...] [--places]
 kitap dev [--story <id>] [--out <dir>] [--port <n>]
 kitap i18n [<lang>] [--story <id>] [--stale | --stamp | --check]
@@ -80,7 +84,9 @@ kitap rehash | kitap upload [--story <id>] [--dry-run] | kitap deploy [--dry-run
 An engine's own binary runs the same commands with its engine, `harita build` for instance, and adds its own.
 A page without a text in a language shows the default language's text. `--strict` fails on a missing translation,
 a page text included, or an object the store lacks; `--local-assets` shows the files on this machine before they are
-uploaded.
+uploaded. `--strict --no-store` runs every strict check and leaves the store unasked, for a story whose images are
+not uploaded yet. `dev --story <id>` watches that story's folder and `content/shared/` alone, so several servers on
+one machine stay inside its limit of file watchers.
 
 `i18n` writes a language's catalogues with the source text above each key. `--stale` then writes
 `.cache/kitap/stale/<story>/<lang>.yaml` per story: the paragraphs and strings whose source changed since the last

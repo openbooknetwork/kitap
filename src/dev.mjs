@@ -9,6 +9,25 @@ import { resolve, typeOf } from './routes.mjs';
 const PKG = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const RELOAD = `<script>(()=>{let v=null;setInterval(async()=>{try{const r=await fetch('/__version');const t=await r.text();if(v===null)v=t;else if(t!==v)location.reload();}catch{}},1000)})()</script>`;
 
+// The folders a dev server watches. Serving every story, all of content/. Serving one story, that story's folder and
+// content/shared/ alone, so several servers on one machine stay inside its limit of file watchers.
+export function watchDirs({ root, story = null, engine = null }) {
+  const CONTENT = path.join(root, 'content');
+  const find = dir => {
+    for (const d of fs.existsSync(dir) ? fs.readdirSync(dir, { withFileTypes: true }) : []) {
+      if (!d.isDirectory() || d.name.startsWith('.')) continue;
+      const full = path.join(dir, d.name);
+      if (fs.existsSync(path.join(full, 'story.yaml'))) { if (d.name === story) return full; continue; }
+      const hit = find(full);
+      if (hit) return hit;
+    }
+    return null;
+  };
+  const own = story ? find(CONTENT) : null;
+  const content = own ? [own, path.join(CONTENT, 'shared')] : [CONTENT];
+  return [...content, path.join(root, 'i18n'), path.join(root, 'plugins'), path.join(PKG, 'src'), ...(engine ? [path.join(path.dirname(engine), '..', 'src')] : [])].filter(fs.existsSync);
+}
+
 // Serve root/dist on the port and rebuild on changes: a change in one story's folder rebuilds that story and the main
 // page, any other change every story. Returns the http server. Builds run in a child process, so package edits apply,
 // and with --local-assets, so the images on this machine show before they are uploaded.
@@ -16,7 +35,7 @@ const RELOAD = `<script>(()=>{let v=null;setInterval(async()=>{try{const r=await
 export function dev({ root = process.cwd(), port = Number(process.env.PORT) || 8080, log = console.log, story = null, out = null, engine = null } = {}) {
   const DIST = out ? path.resolve(root, out) : path.join(root, 'dist'), CONTENT = path.join(root, 'content');
   // engine is the engine module's path, handed to each build and watched beside kitap's own source
-  const WATCH = [CONTENT, path.join(root, 'i18n'), path.join(root, 'plugins'), path.join(PKG, 'src'), ...(engine ? [path.join(path.dirname(engine), '..', 'src')] : [])].filter(fs.existsSync);
+  const WATCH = watchDirs({ root, story, engine });
 
   // what the next build covers: every story, or the story folders changed since the last build
   let version = 0, building = false, queued = false, all = true, changed = new Set();

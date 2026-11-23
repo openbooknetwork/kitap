@@ -8,9 +8,11 @@ export const Translatable = z.union([z.string(), z.record(z.string().min(2).max(
 export const Id = z.string().regex(/^[a-z0-9][a-z0-9-]*$/, 'lowercase letters, digits and dashes only');
 export const Lang = z.string().regex(/^[a-z]{2}(-[A-Za-z]{2,4})?$/, 'a language code like en or pt-BR');
 export const Hex = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'a hex colour like #a06b1f');
-// a year, a year-month, or a full date; YAML hands over a Date for the full form
-export const When = z.union([z.number().int(), z.string(), z.date()]).transform(v => v instanceof Date ? v.toISOString().slice(0, 10) : String(v))
-  .refine(s => /^\d{4}(-\d{2})?(-\d{2})?$/.test(s), 'YYYY, YYYY-MM or YYYY-MM-DD');
+// a year, a year-month, or a full date; YAML hands over a Date for the full form and a number for a year alone.
+// A year before our era takes a minus and counts as historians count it: -0335-03 is March 335 BC.
+export const When = z.union([z.number().int(), z.string(), z.date()])
+  .transform(v => v instanceof Date ? v.toISOString().slice(0, 10) : typeof v === 'number' ? `${v < 0 ? '-' : ''}${String(Math.abs(v)).padStart(4, '0')}` : v)
+  .refine(s => /^-?\d{4}(-\d{2})?(-\d{2})?$/.test(s), 'YYYY, YYYY-MM or YYYY-MM-DD, with a minus before a year BC');
 
 // land: up to eight tints an engine may use for areas, neighbours get different ones; without it every area is paper2.
 // red, blue, green and gold tell the parts of a figure apart, accent without them; on_accent is text on accent, paper without it.

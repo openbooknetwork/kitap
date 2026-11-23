@@ -112,7 +112,10 @@ const writeFile = (file, text) => { fs.mkdirSync(path.dirname(file), { recursive
 
 const emptyText = langs => Object.fromEntries(langs.map(l => [l, '']));
 // A when value with the missing parts rounded down for from and up for to.
-const whenEdge = (s, isEnd) => { const [y, m, d] = s.split('-'); return `${y}-${m ?? (isEnd ? '12' : '01')}-${d ?? (isEnd ? '31' : '01')}`; };
+const whenEdge = (s, isEnd) => { const [, y, m, d] = s.match(/^(-?\d{4})(?:-(\d{2}))?(?:-(\d{2}))?$/); return `${y}-${m ?? (isEnd ? '12' : '01')}-${d ?? (isEnd ? '31' : '01')}`; };
+// a when edge as a number that orders it: a year BC is earlier the larger it is, and its months still run forward
+const whenKey = s => { const [, y, m, d] = s.match(/^(-?\d{4})-(\d{2})-(\d{2})$/); return +y * 10000 + +m * 100 + +d; };
+const whenYear = s => s.startsWith('-') ? `${+s.slice(1, 5)} BC` : s.slice(0, 4);
 
 // --- interface strings: what kitap ships, what the engine ships laid over it, and the project's i18n/ui/<lang>.yaml over both ---
 const engineUiCache = new Map();
@@ -297,7 +300,7 @@ function readContent(p, storyDir, engine, onProblem = null) {
     const need = (ok, msg) => attempt(dir, () => ok || fail(at, msg));
     const w = pg.when == null ? null : typeof pg.when === 'string' ? { from: pg.when } : pg.when;
     const when = w && { from: whenEdge(w.from, false), to: whenEdge(w.to ?? w.from, true) };
-    if (when) need(when.to >= when.from, 'when.to is before when.from');
+    if (when) need(whenKey(when.to) >= whenKey(when.from), 'when.to is before when.from');
     // the engine's fields of the page, and how the text's links resolve
     const ep = attempt(dir, () => engine.read.page(pg[engine.id] ?? {}, { dir, at, own, pid, scope: s, core: pg }, ctx)) ?? { data: {} };
     const links = ep.links ?? null;
@@ -374,7 +377,7 @@ function readContent(p, storyDir, engine, onProblem = null) {
   for (let i = 1; i < pages.length; i++) attempt(path.join(root, pages[i].dir), () => {
     if (pages.find((q, j) => j < i && q.id === pages[i].id)) fail(where, `two pages share the id "${pages[i].id}"`);
     const prev = pages.slice(0, i).reverse().find(q => q.when);
-    if (!prev || !pages[i].when || pages[i].when.from >= prev.when.from) return;
+    if (!prev || !pages[i].when || whenKey(pages[i].when.from) >= whenKey(prev.when.from)) return;
     // an included item moves by its include folder, since the numbers in its own folder count in every story
     const moved = pages[i].include !== prev.include ? pages[i].include ?? prev.include : null;
     fail(where, `${pages[i].dir} starts ${pages[i].when.from}, before ${prev.dir} which starts ${prev.when.from}; ${moved ? `renumber ${moved} to move it` : 'fix the folder numbers or the when fields'}`);
@@ -436,7 +439,7 @@ function buildStory(p, storyDir, site, engine) {
 
   // span is story.span, else the years from the pages' when fields, else the first page's date
   const dated = pages.filter(p => p.when);
-  const years = dated.length ? [...new Set([dated[0].when.from.slice(0, 4), dated[dated.length - 1].when.to.slice(0, 4)])].join(' – ') : null;
+  const years = dated.length ? [...new Set([whenYear(dated[0].when.from), whenYear(dated[dated.length - 1].when.to)])].join(' – ') : null;
   const span = story.span ? T(story.span, 'story.span') : Object.fromEntries(langs.map(l => [l, years ?? pages[0].date[l]]));
   const summary = story.summary ? T(story.summary, 'story.summary') : {};
 
@@ -776,10 +779,12 @@ export function buildPages({ root = process.cwd(), log = console.log, strict = f
 // the images and objects in the asset store, and with strict the store must hold each of them. With localAssets the
 // originals here and the engine's objects are made into dist/assets/. The engine keeps its own caches under cache.
 // With changed it reads the record of the live site from site.yaml's url through get, and builds what differs.
-export async function build({ root = process.cwd(), log = console.log, strict = false, cache = path.join(root, '.cache', 'kitap'), only = null, story = null, out = null, localAssets = false, engine = null, changed = false, get = globalThis.fetch, ...options } = {}) {
+// noStore runs a strict build without asking the store, for a story whose images are not uploaded yet.
+export async function build({ root = process.cwd(), log = console.log, strict = false, cache = path.join(root, '.cache', 'kitap'), only = null, story = null, out = null, localAssets = false, engine = null, changed = false, noStore = false, get = globalThis.fetch, ...options } = {}) {
   const live = changed && !only && !story && !localAssets ? await liveRecord(root, get, log) : null;
   const { objects, trees, assets, engine: e, ...r } = buildPages({ root, log, strict, cache, only, story, out, localAssets, engine, changed, live, ...options });
   if (localAssets && e.make) await e.make({ stories: objects, cache, out: path.join(r.dist, 'assets'), log, options });
+  else if (strict && noStore) log(`the store was not asked, --no-store: ${trees.length} stor${trees.length === 1 ? 'y' : 'ies'} still to check against it once uploaded`);
   else if (strict) await checkStore({ url: assets.url, trees, log, describe: e.describeObjects });
   return r;
 }

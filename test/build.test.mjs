@@ -269,3 +269,27 @@ test('kitap check runs the checks of plugins/checks after its own, with the page
   fs.writeFileSync(path.join(dir, 'broken.mjs'), 'export const x = 1;\n');
   assert.match(check({ root, story: 'first-story', engine: plain })[0], /plugins\/checks\/broken\.mjs:? ?.*a check exports a function as its default/s);
 });
+
+test('a page takes a when before our era, and the order check counts its years backwards', async () => {
+  const root = copy(), page = n => `content/first-story/pages/${n}/page.yaml`;
+  const add = (n, when) => fs.writeFileSync(path.join(root, page(n)), read(root, page(n)).replace(/^when:.*\n/m, '') + `when: ${when}\n`);
+  add('010-one', '-0335-03'); add('020-two', '-0334');
+  await make(root);
+  assert.equal((await make(root)).stories[0].span.en, '335 BC – 334 BC', 'the span reads the years as BC');
+  add('020-two', '-0335-01');
+  await assert.rejects(make(root), /020-two starts -0335-01-01, before .*010-one which starts -0335-03-01/s, 'January comes before March inside a year BC');
+  add('020-two', '-0336');
+  await assert.rejects(make(root), /020-two starts -0336-01-01, before/, '336 BC comes before 335 BC');
+  add('020-two', '{ from: -0335-06, to: -0336 }');
+  await assert.rejects(make(root), /when\.to is before when\.from/);
+  add('010-one', '-335'); add('020-two', '1919');
+  await make(root);
+});
+
+test('a strict build with noStore runs every check and leaves the store unasked', async () => {
+  const root = copy(), lines = [], real = globalThis.fetch;
+  fs.appendFileSync(path.join(root, 'site.yaml'), 'assets: { url: https://assets.example.org/, bucket: assets, endpoint: https://store.example.org }\n');
+  globalThis.fetch = async () => { throw new Error('the store was asked'); };
+  try { await build({ root, log: l => lines.push(l), engine: plain, strict: true, noStore: true }); } finally { globalThis.fetch = real; }
+  assert.ok(lines.some(l => /the store was not asked, --no-store/.test(l)));
+});

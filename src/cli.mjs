@@ -3,14 +3,14 @@
 import { parseArgs } from 'util';
 import { build, check, checkTranslation, dev, i18n, image, imageCandidates, rehash, sources, upload, deploy } from './index.mjs';
 
-export const USAGE = (name = 'kitap', extra = '') => `usage: ${name} build [--strict] [--local-assets] [--changed] [--only <story> ...] [--story <id>] [--out <dir>] | ${name} check <story> [page id ...] [--places] | ${name} dev [--story <id>] [--out <dir>] [--port <n>] | ${name} i18n [<lang>] [--story id] [--stale | --stamp | --check] | ${name} image <file or url> <name> --caption <text> [--credit <text>] [--source <url>] [--story <id>] | ${name} image-candidates <story> --queries <file> [--limit <n>] [--pages <id,id>] [--out <name>] | ${name} sources <story> | ${name} rehash | ${name} upload [--story <id>] [--dry-run] | ${name} deploy [--dry-run]${extra}`;
+export const USAGE = (name = 'kitap', extra = '') => `usage: ${name} build [--strict [--no-store]] [--local-assets] [--changed] [--only <story> ...] [--story <id>] [--out <dir>] | ${name} check <story> [page id ...] [--places] | ${name} dev [--story <id>] [--out <dir>] [--port <n>] | ${name} i18n [<lang>] [--story id] [--stale | --stamp | --check] | ${name} image <file or url> <name> --caption <text> [--credit <text>] [--source <url>] [--story <id>] | ${name} image-candidates <story> --queries <file> [--limit <n>] [--pages <id,id>] [--out <name>] | ${name} sources <story> | ${name} rehash | ${name} upload [--story <id>] [--dry-run] | ${name} deploy [--dry-run]${extra}`;
 
 // argv are the arguments after the command name. engine is the engine module to build with, else site.yaml names it.
 // own(cmd, positionals, options) runs an engine's own command and returns true when it took it. options adds flags.
 export async function run(argv, { name = 'kitap', engine = null, enginePath = null, own = null, options = {}, usage = '' } = {}) {
   let args;
   try {
-    args = parseArgs({ args: argv, allowPositionals: true, options: { strict: { type: 'boolean' }, changed: { type: 'boolean' }, 'local-assets': { type: 'boolean' }, 'dry-run': { type: 'boolean' }, places: { type: 'boolean' }, stale: { type: 'boolean' }, stamp: { type: 'boolean' }, check: { type: 'boolean' }, story: { type: 'string' }, caption: { type: 'string' }, credit: { type: 'string' }, source: { type: 'string' }, only: { type: 'string', multiple: true }, out: { type: 'string' }, port: { type: 'string' }, queries: { type: 'string' }, limit: { type: 'string' }, pages: { type: 'string' }, engine: { type: 'string' }, ...options } });
+    args = parseArgs({ args: argv, allowPositionals: true, options: { strict: { type: 'boolean' }, changed: { type: 'boolean' }, 'local-assets': { type: 'boolean' }, 'no-store': { type: 'boolean' }, 'dry-run': { type: 'boolean' }, places: { type: 'boolean' }, stale: { type: 'boolean' }, stamp: { type: 'boolean' }, check: { type: 'boolean' }, story: { type: 'string' }, caption: { type: 'string' }, credit: { type: 'string' }, source: { type: 'string' }, only: { type: 'string', multiple: true }, out: { type: 'string' }, port: { type: 'string' }, queries: { type: 'string' }, limit: { type: 'string' }, pages: { type: 'string' }, engine: { type: 'string' }, ...options } });
   } catch (err) { // an unknown or incomplete flag
     console.error(`${err.message}\n${USAGE(name, usage)}`);
     process.exit(2);
@@ -25,7 +25,7 @@ export async function run(argv, { name = 'kitap', engine = null, enginePath = nu
   };
   try {
     if (own && await own(cmd, [lang, ...rest].filter(x => x !== undefined), opt)) return;
-    if (cmd === 'build') await build({ strict: opt.strict, localAssets: opt['local-assets'], changed: opt.changed, only: opt.only, story: opt.story, out: opt.out, engine: e });
+    if (cmd === 'build') await build({ strict: opt.strict, noStore: opt['no-store'], localAssets: opt['local-assets'], changed: opt.changed, only: opt.only, story: opt.story, out: opt.out, engine: e });
     else if (cmd === 'check' && lang) report(check({ story: lang, pages: rest, places: opt.places, engine: e }));
     else if (cmd === 'i18n' && opt.check) report(checkTranslation({ lang, story: opt.story, engine: e }));
     else if (cmd === 'i18n' && (lang || opt.stale || opt.stamp)) i18n({ lang, story: opt.story, engine: e, stale: opt.stale, stamp: opt.stamp });
