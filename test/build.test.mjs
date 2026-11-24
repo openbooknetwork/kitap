@@ -302,3 +302,25 @@ test('a strict build with noStore runs every check and leaves the store unasked'
   try { await build({ root, log: l => lines.push(l), engine: plain, strict: true, noStore: true }); } finally { globalThis.fetch = real; }
   assert.ok(lines.some(l => /the store was not asked, --no-store/.test(l)));
 });
+
+test('an image id no folder holds is a placeholder: the page shows a labelled box, a check and a build say it waits, and a strict build stops', async () => {
+  const root = copy(), text = 'content/first-story/pages/010-one/text/en.md';
+  fs.appendFileSync(path.join(root, text), '\n@image harbour-view\n');
+  const lines = [];
+  await build({ root, log: l => lines.push(l), engine: plain, localAssets: true });
+  const image = bundleOf(root).images['harbour-view'];
+  assert.ok(image.placeholder && image.src.startsWith('data:image/svg+xml,'), 'the bundle holds a picture for it');
+  assert.ok(decodeURIComponent(image.src).includes('IMAGE PLACEHOLDER') && decodeURIComponent(image.src).includes('harbour-view'), 'the picture names it');
+  assert.equal(image.caption.en, 'Image placeholder: harbour-view');
+  assert.ok(lines.some(l => /warning: image "harbour-view" waits for its image, .*010-one.* shows a placeholder/.test(l)), 'the build says it waits');
+  assert.ok(read(root, 'dist/first-story/en.md').includes('](data:image/svg+xml,'), 'the Markdown of the story links the picture itself');
+  const said = [];
+  assert.deepEqual(check({ root, story: 'first-story', engine: plain, log: l => said.push(l) }), [], 'the check passes');
+  assert.ok(said.some(l => /^waiting: image "harbour-view" in /.test(l)), 'and says it waits');
+  await assert.rejects(build({ root, log: quiet, engine: plain, localAssets: true, strict: true, noStore: true }), /unknown image "harbour-view"/);
+  // a cover is the story's face on the main page and in link previews, and never waits
+  const root2 = copy();
+  edit(root2, 'content/first-story/story.yaml', /^cover:.*$/m, '');
+  fs.appendFileSync(path.join(root2, 'content/first-story/story.yaml'), '\ncover: harbour-view\n');
+  await assert.rejects(make(root2), /story\.yaml cover: unknown image "harbour-view"/);
+});

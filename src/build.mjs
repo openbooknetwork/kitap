@@ -111,6 +111,16 @@ const listFiles = (p, ext) => exists(p) ? fs.readdirSync(p).filter(f => f.endsWi
 const writeFile = (file, text) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, text); };
 
 const emptyText = langs => Object.fromEntries(langs.map(l => [l, '']));
+// The picture a page shows where an image is named and not found yet: a hatched box with a dashed edge and the
+// name in it, which no reader and no agent that looks at a capture takes for the image. At a marker's thumbnail
+// size the name is too small to read, and the hatching and the question mark still say what it is.
+const placeholderPicture = id => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" width="640" height="400">
+<defs><pattern id="h" width="28" height="28" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="28" height="28" fill="#fff4c2"/><rect width="14" height="28" fill="#ffd84d"/></pattern></defs>
+<rect width="640" height="400" fill="url(#h)"/><rect x="8" y="8" width="624" height="384" fill="none" stroke="#111" stroke-width="8" stroke-dasharray="28 16"/>
+<rect x="60" y="110" width="520" height="180" fill="#111"/>
+<text x="320" y="170" text-anchor="middle" font-family="monospace" font-size="34" font-weight="bold" fill="#ffd84d">? IMAGE PLACEHOLDER ?</text>
+<text x="320" y="230" text-anchor="middle" font-family="monospace" font-size="${Math.max(16, Math.min(34, Math.floor(800 / Math.max(id.length, 1))))}" fill="#fff">${id}</text>
+<text x="320" y="268" text-anchor="middle" font-family="monospace" font-size="18" fill="#bbb">the image is not found yet</text></svg>`)}`;
 // A when value with the missing parts rounded down for from and up for to.
 const whenEdge = (s, isEnd) => { const [, y, m, d] = s.match(/^(-?\d{4})(?:-(\d{2}))?(?:-(\d{2}))?$/); return `${y}-${m ?? (isEnd ? '12' : '01')}-${d ?? (isEnd ? '31' : '01')}`; };
 // a when edge as a number that orders it: a year BC is earlier the larger it is, and its months still run forward
@@ -235,6 +245,8 @@ function readContent(p, storyDir, engine, onProblem = null) {
   // --- image folders: <id>/image.yaml, and the original where this machine has it, read when a text, marker or card
   // first names one. Its objects are in the asset store, or with --local-assets the original is copied to dist/assets/.
   const folderImages = {};
+  // the image ids that no folder holds yet, each with the first place that names it
+  const waiting = new Map();
   const loadImageFolder = (dir, id) => {
     if (folderImages[id]) return id;
     const meta = path.join(dir, 'image.yaml'), files = fs.readdirSync(dir).filter(f => /^image\.\w+$/.test(f) && f !== 'image.yaml');
@@ -252,12 +264,21 @@ function readContent(p, storyDir, engine, onProblem = null) {
     return id;
   };
   // an image a text, an engine item or a card names: the image folder the scope sees by that id
-  const resolveImage = (s, ref, at) => {
+  // An id no folder holds is a placeholder, where the caller lets it wait: a plan names an image before the image
+  // is found, and the text, marker or card that will show it holds the name until then. The page shows a labelled
+  // box in its place, a check and a build say that it waits, and a strict build stops on it, so none reaches a site.
+  const resolveImage = (s, ref, at, { waits = true } = {}) => {
     if (!/^[a-z0-9][a-z0-9-]*$/.test(ref)) fail(at, `unknown image "${ref}", an image id is lowercase letters, digits and dashes`);
     const dirs = s.imageDirs.map(d => imageLib(d).get(ref)).filter(Boolean);
     if (dirs.length > 1) fail(at, `image "${ref}" is in ${dirs.map(rel).join(' and ')}, keep one`);
     if (dirs.length) return loadImageFolder(dirs[0], ref);
-    fail(at, `unknown image "${ref}"`);
+    if (p.strict || !waits) fail(at, `unknown image "${ref}"`);
+    if (!waiting.has(ref)) {
+      waiting.set(ref, at);
+      const said = Object.fromEntries(langs.map(l => [l, `Image placeholder: ${ref}`]));
+      if (!images[ref]) define(images, ref, { id: ref, src: placeholderPicture(ref), thumb: placeholderPicture(ref), caption: said, credit: emptyText(langs), placeholder: true }, at, 'image', null);
+    }
+    return ref;
   };
 
   // A scope is the story's files or an included item's, such as a battle's. It carries the translator of its
@@ -358,10 +379,10 @@ function readContent(p, storyDir, engine, onProblem = null) {
     const pg = attempt(n.dir, () => readPage(n.dir, n.scope));
     return pg && (n.scope.decorate?.(pg) ?? pg);
   }).filter(Boolean);
-  const coverImage = story.cover ? attempt(storyDir, () => resolveImage(storyScope, story.cover, `${rel(storyFile)} cover`)) ?? null : null;
+  const coverImage = story.cover ? attempt(storyDir, () => resolveImage(storyScope, story.cover, `${rel(storyFile)} cover`, { waits: false })) ?? null : null;
   // a second cover for a dark screen stands beside the first, which link previews and light screens show
   if (story.cover_dark && !story.cover) attempt(storyDir, () => fail(rel(storyFile), 'cover_dark is the cover on a dark screen, add cover for every other screen'));
-  const coverDarkImage = story.cover_dark ? attempt(storyDir, () => resolveImage(storyScope, story.cover_dark, `${rel(storyFile)} cover_dark`)) ?? null : null;
+  const coverDarkImage = story.cover_dark ? attempt(storyDir, () => resolveImage(storyScope, story.cover_dark, `${rel(storyFile)} cover_dark`, { waits: false })) ?? null : null;
   // the engine's checks over the whole story, the images its items show, and the folders it read catalogues from
   const fin = attempt(storyDir, () => engine.read.finish({ story, pages, texts, images, coverImage }, ctx)) ?? {};
   // a page without a text in a language showed its default language text
@@ -371,6 +392,9 @@ function readContent(p, storyDir, engine, onProblem = null) {
   const shownImages = new Set([...pages.flatMap(pg => langs.flatMap(l => [...(texts[pg.id]?.[l] ?? '').matchAll(/^@image\s+(\S+)\s*$/gm)].map(m => m[1]))),
     ...(fin.images ?? []), ...(coverImage ? [coverImage] : []), ...(coverDarkImage ? [coverDarkImage] : [])]);
   for (const id of Object.keys(images)) if (!shownImages.has(id)) delete images[id];
+  // each placeholder a page shows, said once: nothing is wrong, and the story is not ready for a strict build
+  const waits = [...waiting].filter(([id]) => shownImages.has(id)).map(([id, at]) => ({ id, at }));
+  for (const w of waits) warnings.push(`image "${w.id}" waits for its image, ${w.at} shows a placeholder`);
   // --strict holds each original on this machine to the sha256 its image.yaml records, which names its objects
   const shipped = Object.values(folderImages).filter(f => shownImages.has(f.id));
   if (p.strict) for (const f of shipped) if (f.file && f.sha256 !== sha256(f.file)) fail(f.meta, `${path.basename(f.file)} changed after its sha256 was written, kitap rehash writes the new one`);
@@ -383,7 +407,7 @@ function readContent(p, storyDir, engine, onProblem = null) {
     fail(where, `${pages[i].dir} starts ${pages[i].when.from}, before ${prev.dir} which starts ${prev.when.from}; ${moved ? `renumber ${moved} to move it` : 'fix the folder numbers or the when fields'}`);
   });
   return { story, langs, defaultLang, T, entries, translations: report, tree, images, icons, pages, texts, firstImages, warnings: [...warnings, ...(fin.warnings ?? [])], unlinked, fallbacks: storyScope.fallbacks,
-    imageFolders: Object.values(folderImages), shippedImages: shipped, coverImage, coverDarkImage, engine: E, folders: fin.folders ?? [], state: E, pageTexts };
+    imageFolders: Object.values(folderImages), shippedImages: shipped, waitingImages: waits, coverImage, coverDarkImage, engine: E, folders: fin.folders ?? [], state: E, pageTexts };
 }
 
 // The objects a story links to: its images with their keys and where their originals are, the engine's objects in
@@ -399,7 +423,7 @@ function buildStory(p, storyDir, site, engine) {
   const { log, root } = p;
   const where = p.rel(storyDir);
   const content = readContent(p, storyDir, engine);
-  const { story, langs, defaultLang, T, entries, translations, tree, images, icons, pages, texts, firstImages, warnings, imageFolders, shippedImages, coverImage, coverDarkImage, folders, fallbacks, pageTexts } = content;
+  const { story, langs, defaultLang, T, entries, translations, tree, images, icons, pages, texts, firstImages, warnings, imageFolders, shippedImages, waitingImages, coverImage, coverDarkImage, folders, fallbacks, pageTexts } = content;
   for (const w of warnings) log(`  warning: ${w}`);
   const ui = uiFor(langs, root, engine);
   const { tr: siteT } = translator({ langs, defaultLang: site.default_language ?? defaultLang, catalogues: loadCatalogues(path.join(root, 'i18n'), langs, p.loadYaml), where: 'i18n', fail });
@@ -458,7 +482,8 @@ function buildStory(p, storyDir, site, engine) {
     .replace('/*__THEMES_CSS__*/', () => themeCss(site.themes, bundle.defaultTheme));
   const storyJs = `const BUNDLE = ${JSON.stringify(bundle)};\n`;
   writeFile(path.join(out, 'story.js'), storyJs);
-  const links = Object.fromEntries(shippedImages.map(f => [f.id, f.links]));
+  // a placeholder's picture is its own link, and it is no picture for a link preview
+  const links = Object.fromEntries([...shippedImages.map(f => [f.id, f.links]), ...waitingImages.map(w => [w.id, { original: images[w.id].src, og: null }])]);
   const files = storyFiles({ shell, bundle, texts, firstImages, links, coverImage, site: site.context, engine: engine.id, versions: { story: version(storyJs), app: version(APP_JS), engine: site.engineVersion } });
   for (const [f, text] of Object.entries(files)) writeFile(path.join(out, f), text);
   log(`  wrote dist/${story.id}/ (story.js ${(Buffer.byteLength(storyJs) / 1e6).toFixed(1)} MB, ${pages.length} pages in ${langs.join('/')})`);
@@ -597,7 +622,9 @@ export function checkStory({ root = process.cwd(), story, pages = [], places = f
   const problems = [];
   try {
     const e = engineOf(p, readSite(p), engine);
-    const { tree, unlinked, fallbacks } = readContent(p, storyDir, e, (dir, msg, pageId) => { if (inScope(pageId)) problems.push(msg); });
+    const { tree, unlinked, fallbacks, waitingImages } = readContent(p, storyDir, e, (dir, msg, pageId) => { if (inScope(pageId)) problems.push(msg); });
+    // a placeholder is no problem: it is said, and the check passes
+    for (const w of waitingImages) log(`waiting: image "${w.id}" in ${w.at}, the page shows a placeholder until the image is found`);
     for (const [lang, ids] of Object.entries(fallbacks)) { const n = ids.filter(inScope).length; if (n) log(`${lang}: ${n} pages without text/${lang}.md show the default language text`); }
     if (places) for (const u of unlinked) if (inScope(u.pageId)) log(`${u.file}: ${u.names.join(', ')}`);
     const dirs = new Map(), collect = nodes => { for (const n of nodes) n.type === 'page' ? dirs.set(n.id, n.dir) : collect(n.children); };

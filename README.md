@@ -62,6 +62,10 @@ beden:
 
 A text is Markdown. `@image <id>` on a line of its own shows an image folder, and `[word](@id)` links a word to
 something the engine shows on the page, a marker on a map or a part of a model.
+An image id that no folder holds yet is a placeholder: a text, or an item of the engine's, can name its image
+before the image is found. The page shows a hatched box with the name in it, `check` passes and lists each one as
+`waiting`, a build warns of it, and `build --strict` stops on it, so none reaches a site. A story's `cover` never
+waits.
 [writing/](writing/README.md) has the rules for the English of a story and for its translations, with a file per target language.
 [agents/](agents/) has the instructions of the agents every book shares: `translating.md` for whoever hands out a
 translation, `translator.md` and `translation-reviewer.md` for the two agents that do it. A book's

@@ -78,8 +78,8 @@ export function storyFiles({ shell, bundle: B, texts, firstImages, links, coverI
   const site = { ...siteIn, title: B.site.title }, files = {}, id = B.id, langs = B.languages, def = B.defaultLanguage, pages = B.pages;
   const homeLang = l => site.langs.includes(l) ? l : site.defaultLang;
   // the Markdown file sits in the story folder, so a link from the site root goes one folder up
-  const imageUrl = imgId => site.url ? site.abs(links[imgId].original) : /^https?:/.test(links[imgId].original) ? links[imgId].original : `../${links[imgId].original}`;
-  const ogImage = imgId => site.url ? site.abs(links[imgId].og) : null;
+  const imageUrl = imgId => site.url ? site.abs(links[imgId].original) : /^(https?|data):/.test(links[imgId].original) ? links[imgId].original : `../${links[imgId].original}`;
+  const ogImage = imgId => site.url && links[imgId].og ? site.abs(links[imgId].og) : null;
   const cover = coverImage ? ogImage(coverImage) : null;
   const overviewAt = l => `${id}/${l}/`, stepAt = (l, pid) => `${id}/${l}/${pid}/`;
 
