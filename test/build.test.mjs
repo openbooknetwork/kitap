@@ -324,3 +324,16 @@ test('an image id no folder holds is a placeholder: the page shows a labelled bo
   fs.appendFileSync(path.join(root2, 'content/first-story/story.yaml'), '\ncover: harbour-view\n');
   await assert.rejects(make(root2), /story\.yaml cover: unknown image "harbour-view"/);
 });
+
+test('a page with no text yet waits: it shows a placeholder line, a check and a build say so, and a strict build stops', async () => {
+  const root = copy(), page = 'content/first-story/pages/010-one';
+  fs.rmSync(path.join(root, page, 'text'), { recursive: true });
+  const lines = [];
+  await build({ root, log: l => lines.push(l), engine: plain, localAssets: true });
+  assert.ok(read(root, 'dist/first-story/story.js').includes('TEXT PLACEHOLDER'), 'the page shows the placeholder line');
+  assert.ok(lines.some(l => /warning: .*010-one waits for its text/.test(l)), 'the build says it waits');
+  const said = [];
+  assert.deepEqual(check({ root, story: 'first-story', engine: plain, log: l => said.push(l) }), [], 'the check passes');
+  assert.ok(said.some(l => /^waiting: text of .*010-one/.test(l)), 'and says it waits');
+  await assert.rejects(build({ root, log: quiet, engine: plain, localAssets: true, strict: true, noStore: true }), /010-one: text\/en\.md is missing/);
+});

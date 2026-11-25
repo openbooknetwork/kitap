@@ -114,6 +114,7 @@ const emptyText = langs => Object.fromEntries(langs.map(l => [l, '']));
 // The picture a page shows where an image is named and not found yet: a hatched box with a dashed edge and the
 // name in it, which no reader and no agent that looks at a capture takes for the image. At a marker's thumbnail
 // size the name is too small to read, and the hatching and the question mark still say what it is.
+const TEXT_WAITS = '**? TEXT PLACEHOLDER ?** The text of this page is not written yet.\n';
 const placeholderPicture = id => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" width="640" height="400">
 <defs><pattern id="h" width="28" height="28" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="28" height="28" fill="#fff4c2"/><rect width="14" height="28" fill="#ffd84d"/></pattern></defs>
 <rect width="640" height="400" fill="url(#h)"/><rect x="8" y="8" width="624" height="384" fill="none" stroke="#111" stroke-width="8" stroke-dasharray="28 16"/>
@@ -247,6 +248,8 @@ function readContent(p, storyDir, engine, onProblem = null) {
   const folderImages = {};
   // the image ids that no folder holds yet, each with the first place that names it
   const waiting = new Map();
+  // the pages whose text is not written yet, each with its folder
+  const waitingTexts = new Map();
   const loadImageFolder = (dir, id) => {
     if (folderImages[id]) return id;
     const meta = path.join(dir, 'image.yaml'), files = fs.readdirSync(dir).filter(f => /^image\.\w+$/.test(f) && f !== 'image.yaml');
@@ -332,10 +335,20 @@ function readContent(p, storyDir, engine, onProblem = null) {
       let found = textOf(lang), fallback = false;
       if (!found && s.textFallback && lang !== s.defaultLang) {
         found = textOf(s.defaultLang);
-        if (!found) fail(rel(dir), `text/${s.defaultLang}.md is missing`);
-        fallback = true; (s.fallbacks[lang] ??= []).push(pid);
+        if (found) { fallback = true; (s.fallbacks[lang] ??= []).push(pid); }
       }
-      if (!found) fail(rel(dir), `text/${lang}.md is missing`);
+      // A page whose text is not written yet waits for it, as an image waits for its folder: the page shows a line
+      // that says so, a check and a build say that it waits, and a strict build stops on it. So a map can be
+      // built and looked at before its text exists.
+      if (!found) {
+        // no text in the default language at all is a page that waits. A default text with this language's
+        // missing, where the scope shows no fallback, is a gap of a translation, and fails as before.
+        const none = !textOf(s.defaultLang);
+        if (p.strict || !none) fail(rel(dir), `text/${none ? s.defaultLang : lang}.md is missing`);
+        waitingTexts.set(pid, rel(dir));
+        found = [path.join(dir, 'text', `${s.defaultLang}.md`), TEXT_WAITS];
+        fallback = true;
+      }
       const [textFile, source] = found;
       if (!fallback) pageText.texts[lang] = source;
       // the image ids become the bundle's, so the Markdown export and og:image find an included item's images
@@ -395,6 +408,7 @@ function readContent(p, storyDir, engine, onProblem = null) {
   // each placeholder a page shows, said once: nothing is wrong, and the story is not ready for a strict build
   const waits = [...waiting].filter(([id]) => shownImages.has(id)).map(([id, at]) => ({ id, at }));
   for (const w of waits) warnings.push(`image "${w.id}" waits for its image, ${w.at} shows a placeholder`);
+  for (const [, at] of waitingTexts) warnings.push(`${at} waits for its text and shows a placeholder`);
   // --strict holds each original on this machine to the sha256 its image.yaml records, which names its objects
   const shipped = Object.values(folderImages).filter(f => shownImages.has(f.id));
   if (p.strict) for (const f of shipped) if (f.file && f.sha256 !== sha256(f.file)) fail(f.meta, `${path.basename(f.file)} changed after its sha256 was written, kitap rehash writes the new one`);
@@ -407,7 +421,7 @@ function readContent(p, storyDir, engine, onProblem = null) {
     fail(where, `${pages[i].dir} starts ${pages[i].when.from}, before ${prev.dir} which starts ${prev.when.from}; ${moved ? `renumber ${moved} to move it` : 'fix the folder numbers or the when fields'}`);
   });
   return { story, langs, defaultLang, T, entries, translations: report, tree, images, icons, pages, texts, firstImages, warnings: [...warnings, ...(fin.warnings ?? [])], unlinked, fallbacks: storyScope.fallbacks,
-    imageFolders: Object.values(folderImages), shippedImages: shipped, waitingImages: waits, coverImage, coverDarkImage, engine: E, folders: fin.folders ?? [], state: E, pageTexts };
+    imageFolders: Object.values(folderImages), shippedImages: shipped, waitingImages: waits, waitingTexts: [...waitingTexts].map(([id, at]) => ({ id, at })), coverImage, coverDarkImage, engine: E, folders: fin.folders ?? [], state: E, pageTexts };
 }
 
 // The objects a story links to: its images with their keys and where their originals are, the engine's objects in
@@ -622,9 +636,10 @@ export function checkStory({ root = process.cwd(), story, pages = [], places = f
   const problems = [];
   try {
     const e = engineOf(p, readSite(p), engine);
-    const { tree, unlinked, fallbacks, waitingImages } = readContent(p, storyDir, e, (dir, msg, pageId) => { if (inScope(pageId)) problems.push(msg); });
+    const { tree, unlinked, fallbacks, waitingImages, waitingTexts } = readContent(p, storyDir, e, (dir, msg, pageId) => { if (inScope(pageId)) problems.push(msg); });
     // a placeholder is no problem: it is said, and the check passes
     for (const w of waitingImages) log(`waiting: image "${w.id}" in ${w.at}, the page shows a placeholder until the image is found`);
+    for (const w of waitingTexts) if (inScope(w.id)) log(`waiting: text of ${w.at}, the page shows a placeholder until its text is written`);
     for (const [lang, ids] of Object.entries(fallbacks)) { const n = ids.filter(inScope).length; if (n) log(`${lang}: ${n} pages without text/${lang}.md show the default language text`); }
     if (places) for (const u of unlinked) if (inScope(u.pageId)) log(`${u.file}: ${u.names.join(', ')}`);
     const dirs = new Map(), collect = nodes => { for (const n of nodes) n.type === 'page' ? dirs.set(n.id, n.dir) : collect(n.children); };
